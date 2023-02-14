@@ -43,72 +43,72 @@ public class IOTest2 {
         );
     }
 
-    //@Test
-    //public void testRaceWinnerFail() {
-        //IO<Object, Failure, Integer> io = slow(50, 2).race(
-            //slow(1, 5).<Failure, Integer>flatMap(n ->
-                //IO.fail(Cause.fail(GeneralFailure.of(n)))
-            //)
-        //);
-        //Assert.assertEquals(
-            //Right.of(2),
-            //defaultRuntime.unsafeRun(io)
-        //);
-    //}
+    @Test
+    public void testRaceWinnerFail() {
+        IO<Object, Failure, Integer> io = slow(50, 2).race(
+            slow(1, 5).<Failure, Integer>flatMap(n ->
+                IO.fail(Cause.fail(GeneralFailure.of(n)))
+            )
+        );
+        Assert.assertEquals(
+            Right.of(2),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
 
-    //@Test
-    //public void testRaceFails() {
-        //IO<Object, Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
-            //IO.fail(Cause.fail(n))
-        //).race(
-            //slow(1, 5).<Integer, Integer>flatMap(n ->
-                //IO.fail(Cause.fail(n))
-            //)
-        //);
-        //Assert.assertEquals(
-            //Left.of(Cause.fail(5).then(Cause.fail(2))),
-            //defaultRuntime.unsafeRun(io)
-        //);
-    //}
+    @Test
+    public void testRaceFails() {
+        IO<Object, Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
+            IO.fail(Cause.fail(n))
+        ).race(
+            slow(1, 5).<Integer, Integer>flatMap(n ->
+                IO.fail(Cause.fail(n))
+            )
+        );
+        Assert.assertEquals(
+            Left.of(Cause.fail(5).then(Cause.fail(2))),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
 
-    //@Test
-    //public void testRaceAttempt() {
-        //IO<Object, Failure, Integer> io = slow(100, 2).raceAttempt(
-            //slow(1, 5)
-        //);
-        //Assert.assertEquals(
-            //Right.of(5),
-            //defaultRuntime.unsafeRun(io)
-        //);
-    //}
+    @Test
+    public void testRaceAttempt() {
+        IO<Object, Failure, Integer> io = slow(100, 2).raceAttempt(
+            slow(1, 5)
+        );
+        Assert.assertEquals(
+            Right.of(5),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
 
-    //@Test
-    //public void testRaceAttemptWinnerFail() {
-        //IO<Object, Failure, Integer> io = slow(50, 2).raceAttempt(
-            //slow(1, 5).<Failure, Integer>flatMap(n ->
-                //IO.fail(Cause.fail(GeneralFailure.of(n)))
-            //)
-        //);
-        //Assert.assertEquals(
-            //Left.of(Cause.fail(GeneralFailure.of(5))),
-            //defaultRuntime.unsafeRun(io)
-        //);
-    //}
+    @Test
+    public void testRaceAttemptWinnerFail() {
+        IO<Object, Failure, Integer> io = slow(50, 2).raceAttempt(
+            slow(1, 5).<Failure, Integer>flatMap(n ->
+                IO.fail(Cause.fail(GeneralFailure.of(n)))
+            )
+        );
+        Assert.assertEquals(
+            Left.of(Cause.fail(GeneralFailure.of(5))),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
 
-    //@Test
-    //public void testRaceAttemptFails() {
-        //IO<Object, Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
-            //IO.fail(Cause.fail(n))
-        //).raceAttempt(
-            //slow(1, 5).<Integer, Integer>flatMap(n ->
-                //IO.fail(Cause.fail(n))
-            //)
-        //);
-        //Assert.assertEquals(
-            //Left.of(Cause.fail(5)),
-            //defaultRuntime.unsafeRun(io)
-        //);
-    //}
+    @Test
+    public void testRaceAttemptFails() {
+        IO<Object, Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
+            IO.fail(Cause.fail(n))
+        ).raceAttempt(
+            slow(1, 5).<Integer, Integer>flatMap(n ->
+                IO.fail(Cause.fail(n))
+            )
+        );
+        Assert.assertEquals(
+            Left.of(Cause.fail(5)),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
 
     private <A> Either<Exception, A> slowOld(long millis, A value) {
         try {

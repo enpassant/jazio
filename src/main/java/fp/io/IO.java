@@ -1,6 +1,7 @@
 package fp.io;
 
 import java.util.Iterator;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
@@ -22,6 +23,16 @@ import fp.util.Tuple2;
 
 public abstract class IO<C, F, R> {
     Tag tag;
+    Optional<String> nameOptional = Optional.empty();
+
+    public IO<C, F, R> setName(String name) {
+        nameOptional = Optional.ofNullable(name);
+        return this;
+    }
+
+    public Optional<String> getNameOptional() {
+        return nameOptional;
+    }
 
     public static <C, F, R> IO<C, F, R> absolve(IO<C, F, Either<F, R>> io) {
         return io.flatMap(either -> either.fold(
@@ -256,8 +267,8 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public static <C, F, R> IO<C, F, R> sleep(long nanoseconds) {
-        return new Schedule<C, F, R>(
+    public static <C, F> IO<C, F, Void> sleep(long nanoseconds) {
+        return new Schedule<C, F, Void>(
             IO.unit(),
             new Scheduler.Delayer(nanoseconds),
             schedule -> f -> IO.fail(f),
@@ -443,22 +454,29 @@ public abstract class IO<C, F, R> {
         IO<C, F, R2> that
     ) {
         return this.fork().flatMap(fiber ->
-            that.fork().flatMap(fiberThat ->
-                IO.<C, Failure, RaceResult<F, R, R2>>effect(() ->
-                    fiber.raceWith(fiberThat).get()
-                ).mapFailure(failure -> {
-                    fiber.interrupt();
-                    fiberThat.interrupt();
-                    return Cause.die((ExceptionFailure) failure);
-                }).map(raceResult ->
-                    raceResult.getWinner().getCompletedValue().forEachLeft(
-                        failure -> raceResult.getLooser().interrupt()
-                    )
-                ).flatMap(f ->
-                IO.<C, F, R>join(fiber).flatMap((R value) ->
-                IO.<C, F, R2>join(fiberThat).map((R2 valueThat) ->
+            that.fork().flatMap(fiberThat -> {
+                fiber.andThen(f ->
+                    f.getCompletedValue().forEachLeft(
+                        fail -> fiberThat.interrupt())
+                );
+                fiberThat.andThen(f ->
+                    f.getCompletedValue().forEachLeft(
+                        fail -> fiber.interrupt())
+                );
+                return IO.<C, F, R>join(fiber).flatMap((R value) ->
+                IO.<C, F, R2>join(fiberThat) .map((R2 valueThat) ->
                 Tuple2.of(value, valueThat)
-        )))));
+                ));
+            })
+        );
+    }
+
+    public <R2, R3> IO<C, F, R3> zipParWith(
+        IO<C, F, R2> that,
+        BiFunction<R, R2, R3> fn
+    ) {
+        return zipPar(that)
+            .map(tuple2 -> fn.apply(tuple2.getFirst(), tuple2.getSecond()));
     }
 
     enum Tag {

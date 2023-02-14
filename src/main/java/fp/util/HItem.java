@@ -11,6 +11,10 @@ public class HItem<T, R extends HList> implements HList {
         this.value2 = value2;
     }
 
+    public static <T> HItem<T, HNil> of(T value) {
+        return new HItem<T, HNil>(value, new HNil());
+    }
+
     public static <T, R extends HList> HItem<T, R> of(T value1, R value2) {
         return new HItem<T, R>(value1, value2);
     }

@@ -645,6 +645,18 @@ public class IOTest {
     }
 
     @Test
+    public void testZipParWith() {
+        IO<Object, Failure, String> io = slow(10, 2).zipParWith(
+            slow(1, "Test"),
+            (i, s) -> s + "-" + i
+        );
+        Assert.assertEquals(
+            Right.of("Test-2"),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
+
+    @Test
     public void testRace() {
         IO<Object, Failure, Integer> io = slow(100, 2).race(
             slow(1, 5)
