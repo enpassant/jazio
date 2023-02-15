@@ -4,12 +4,6 @@ version := "1.0.0-SNAPSHOT"
 
 description := "Java IO effect library, inspired by the fantastic ZIO library"
 
-//fork := true
-
-//javacOptions += "-Xlint"
-
-javaOptions += "-Xmx512m"
-
 lazy val publishSettings = Seq(
   publishMavenStyle := true,
   publishTo := {
@@ -20,7 +14,7 @@ lazy val publishSettings = Seq(
       Some("releases"  at nexus + "service/local/staging/deploy/maven2")
   },
   publishConfiguration := publishConfiguration.value.withOverwrite(true),
-  publishArtifact in Test := false,
+  Test / publishArtifact := false,
   pomIncludeRepository := { _ => false },
   pomExtra := (
     <url>https://github.com/enpassant/jazio</url>
@@ -49,16 +43,18 @@ lazy val root = (project in file("."))
   .configs(IntegrationTest)
   .settings(
     publishSettings,
+    javaOptions += "-Xmx512m",
     organization := "io.github.enpassant",
     libraryDependencies ++= Seq(
       "org.postgresql" % "postgresql" % "42.2.10" % Test,
       "com.h2database" % "h2" % "1.4.197" % Test,
       "junit" % "junit" % "4.12" % Test,
       "com.novocode" % "junit-interface" % "0.11" % Test
-    )
+    ),
+    crossPaths := false,
+    testOptions += Tests.Argument(TestFrameworks.JUnit)
   )
 
-testOptions += Tests.Argument(TestFrameworks.JUnit)
 
 Test / parallelExecution := true
 
