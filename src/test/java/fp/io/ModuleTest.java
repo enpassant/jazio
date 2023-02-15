@@ -1,13 +1,10 @@
 package fp.io;
 
-import java.text.MessageFormat;
-
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
 import fp.util.Either;
-import fp.util.Failure;
 import fp.util.Right;
 
 public class ModuleTest {
@@ -19,64 +16,6 @@ public class ModuleTest {
     @AfterClass
     public static void setUp() {
         platform.shutdown();
-    }
-
-    private class TestConsole implements Console.Service {
-        private final StringBuilder sb = new StringBuilder();
-        private final String[] inputs;
-        private int inputIndex = 0;
-
-        public TestConsole(final String... inputs) {
-            this.inputs = inputs;
-        }
-
-        @Override
-        public IO<Object, Object, Void> println(String line) {
-            return IO.effectTotal(() -> { sb.append(line).append("\n"); });
-        }
-        @Override
-        public IO<Object, Failure, String> readLine() {
-            return IO.effect(() -> inputs[inputIndex++]);
-        }
-        public String getOutputs() {
-            return sb.toString();
-        }
-    }
-
-    private class TestLog implements Log.Service {
-        private final StringBuilder sb = new StringBuilder();
-
-        private IO<Object, Object, Void> log(
-            String level,
-            String message,
-            Object... params
-        ) {
-            return IO.effectTotal(() -> {
-                sb.append("[" + level + "] ")
-                    .append(MessageFormat.format(message, params))
-                    .append("\n");
-            });
-        }
-        @Override
-        public IO<Object, Object, Void> error(String message, Object... params) {
-            return log("Error", message, params);
-        }
-        @Override
-        public IO<Object, Object, Void> debug(String message, Object... params) {
-            return log("Debug", message, params);
-        }
-        @Override
-        public IO<Object, Object, Void> info(String message, Object... params) {
-            return log("Info", message, params);
-        }
-        @Override
-        public IO<Object, Object, Void> warning(String message, Object... params) {
-            return log("Warning", message, params);
-        }
-
-        public String getOutputs() {
-            return sb.toString();
-        }
     }
 
     @Test

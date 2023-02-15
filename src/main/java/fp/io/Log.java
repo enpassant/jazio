@@ -11,6 +11,7 @@ public class Log {
         IO<Object, Object, Void> error(String message, Object... params);
         IO<Object, Object, Void> debug(String message, Object... params);
         IO<Object, Object, Void> info(String message, Object... params);
+        IO<Object, Object, Void> trace(String message, Object... params);
         IO<Object, Object, Void> warning(String message, Object... params);
     }
 
@@ -47,6 +48,10 @@ public class Log {
             return log(Level.INFO, message, params);
         }
         @Override
+        public IO<Object, Object, Void> trace(String message, Object... params) {
+            return log(Level.INFO, message, params);
+        }
+        @Override
         public IO<Object, Object, Void> warning(String message, Object... params) {
             return log(Level.WARNING, message, params);
         }
@@ -61,6 +66,10 @@ public class Log {
     }
 
     public static IO<Environment, Object, Void> info(String message, Object... params) {
+        return IO.accessM(env -> env.get(Service.class).info(message, params));
+    }
+
+    public static IO<Environment, Object, Void> trace(String message, Object... params) {
         return IO.accessM(env -> env.get(Service.class).info(message, params));
     }
 
