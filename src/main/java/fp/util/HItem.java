@@ -44,6 +44,17 @@ public class HItem<T, R extends HList> implements HList {
     }
 
     @Override
+    public HList reverse() {
+        HList hlist = this;
+        HList forward = new HNil();
+        while (!hlist.isEmpty()) {
+            forward = forward.add(hlist.get());
+            hlist = hlist.tail();
+        }
+        return forward;
+    }
+
+    @Override
     public boolean equals(Object obj) {
         if (this == obj) {
             return true;

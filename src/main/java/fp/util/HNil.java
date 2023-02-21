@@ -21,6 +21,11 @@ public class HNil implements HList {
     }
 
     @Override
+    public HNil reverse() {
+        return this;
+    }
+
+    @Override
     public boolean equals(Object obj) {
         return (obj instanceof HNil);
     }

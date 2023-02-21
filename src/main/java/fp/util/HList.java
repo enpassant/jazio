@@ -20,6 +20,8 @@ public interface HList {
 
     boolean isEmpty();
 
+    HList reverse();
+
     default Stream<Object> valueStream() {
         HList hlist = this;
         Builder<Object> builder = Stream.builder();
