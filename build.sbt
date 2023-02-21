@@ -43,6 +43,7 @@ lazy val root = (project in file("."))
   .configs(IntegrationTest)
   .settings(
     publishSettings,
+    javacOptions += "-Xlint:unchecked",
     javaOptions += "-Xmx512m",
     organization := "io.github.enpassant",
     libraryDependencies ++= Seq(
