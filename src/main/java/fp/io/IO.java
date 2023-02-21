@@ -102,10 +102,31 @@ public abstract class IO<C, F, R> {
         return new Peek<C, F, R>(this, consumer);
     }
 
-    public IO<C, F, R> peekM(Function<R, IO<C, F, Void>> consumerIO) {
+    public <R2> IO<C, F, R> peekM(Function<R, IO<C, F, R2>> consumerIO) {
         return this.foldCauseM(
             cause -> IO.fail(cause),
             success -> consumerIO.apply(success).map(v -> success)
+        );
+    }
+
+    public IO<C, F, R> peekFailure(Consumer<F> consumer) {
+        return this.<F, R>foldM(
+            failure -> {
+                consumer.accept(failure);
+                return IO.fail(Cause.fail(failure));
+            },
+            success -> IO.succeed(success)
+        );
+    }
+
+    public <F2, R2> IO<C, F, R> peekFailureIO(Function<F, IO<C, F2, R2>> ioFn) {
+        return this.<F, R>foldM(
+            failure -> ioFn.apply(failure).<F, R>foldM(
+                f -> IO.<C, F, R>fail(Cause.fail(failure)),
+                s -> IO.<C, F, R>fail(Cause.fail(failure))
+
+            ),
+            success -> IO.succeed(success)
         );
     }
 

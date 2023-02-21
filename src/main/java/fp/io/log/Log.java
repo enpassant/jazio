@@ -1,7 +1,10 @@
-package fp.io;
+package fp.io.log;
 
 import java.util.logging.Level;
 import java.util.logging.Logger;
+
+import fp.io.Environment;
+import fp.io.IO;
 
 public class Log {
     private Log() {

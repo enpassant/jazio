@@ -1,6 +1,9 @@
-package fp.io;
+package fp.io.log;
 
 import java.text.MessageFormat;
+
+import fp.io.Environment;
+import fp.io.IO;
 
 public class TestLog implements Log.Service {
     private final StringBuilder sb = new StringBuilder();

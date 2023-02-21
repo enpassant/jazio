@@ -4,6 +4,10 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
+import fp.io.console.Console;
+import fp.io.console.TestConsole;
+import fp.io.log.Log;
+import fp.io.log.TestLog;
 import fp.util.Either;
 import fp.util.Right;
 
@@ -33,10 +37,7 @@ public class ModuleTest {
         final TestConsole testConsole = new TestConsole("John");
         final TestLog testLog = new TestLog();
 
-//        final Logger logger = Logger.getLogger(ModuleTest.class.getName());
         final Environment environment =
-//            Environment.of(Console.Service.class, new Console.Live())
-//                .and(Log.Service.class, new Log.Live(logger));
             Environment.of(Console.Service.class, testConsole)
                 .and(Log.Service.class, testLog);
 

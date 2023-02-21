@@ -1,5 +1,7 @@
-package fp.io;
+package fp.io.console;
 
+import fp.io.Environment;
+import fp.io.IO;
 import fp.util.Failure;
 
 public class TestConsole implements Console.Service {

@@ -1,8 +1,10 @@
-package fp.io;
+package fp.io.console;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
+import fp.io.Environment;
+import fp.io.IO;
 import fp.util.Failure;
 
 public class Console {
