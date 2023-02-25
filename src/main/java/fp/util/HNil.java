@@ -1,13 +1,22 @@
 package fp.util;
 
+import java.util.NoSuchElementException;
+import java.util.Optional;
+
 public class HNil implements HList {
     @Override
     public <R> HItem<R, HNil> add(R value) {
         return HList.of(value);
     }
 
-    public HNil get() {
-        return this;
+    @Override
+    public <T> T head() {
+        throw new NoSuchElementException();
+    }
+
+    @Override
+    public <T> Optional<T> headOptional() {
+        return Optional.empty();
     }
 
     @Override
@@ -18,6 +27,11 @@ public class HNil implements HList {
     @Override
     public boolean isEmpty() {
         return true;
+    }
+
+    @Override
+    public int size() {
+        return 0;
     }
 
     @Override
