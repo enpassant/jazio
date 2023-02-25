@@ -30,6 +30,14 @@ public final class Tuple2<A, B> {
             ));
     }
 
+    public A _1() {
+        return first;
+    }
+
+    public B _2() {
+        return second;
+    }
+
     public A getFirst() {
         return first;
     }
