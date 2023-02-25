@@ -6,39 +6,35 @@ import java.util.stream.Collectors;
 public class HQueueNotEmpty implements HQueue {
     private final HList forward;
     private final HList backward;
-    private final int size;
 
     private HQueueNotEmpty(
         final HList forward,
-        final HList backward,
-        final int size
+        final HList backward
     ) {
         this.forward = forward;
         this.backward = backward;
-        this.size = size;
     }
 
     public static <T> HQueue of(final T value) {
-        return new HQueueNotEmpty(HList.of(value), new HNil(), 1);
+        return new HQueueNotEmpty(HList.of(value), new HNil());
     }
 
     @Override
     public <S> HQueueNotEmpty add(final S value) {
         return new HQueueNotEmpty(
             forward,
-            backward.add(value),
-            size + 1
+            backward.add(value)
         );
     }
 
     @Override
     public <T> T head() {
-        return (T) forward.get();
+        return (T) forward.head();
     }
 
     @Override
     public <T> Optional<T> headOptional() {
-        return Optional.of((T) forward.get());
+        return Optional.of((T) forward.head());
     }
 
     @Override
@@ -50,12 +46,11 @@ public class HQueueNotEmpty implements HQueue {
             } else {
                 return new HQueueNotEmpty(
                     backward.reverse(),
-                    new HNil(),
-                    size - 1
+                    new HNil()
                 );
             }
         } else {
-            return new HQueueNotEmpty(tail, backward, size - 1);
+            return new HQueueNotEmpty(tail, backward);
         }
     }
 
@@ -63,7 +58,7 @@ public class HQueueNotEmpty implements HQueue {
     public <T> Optional<T> get(final int index) {
         if (index == 0) {
             return headOptional();
-        } else if (index > 0 && index < size) {
+        } else if (index > 0 && index < size()) {
             return tail().get(index - 1);
         } else {
             return Optional.empty();
@@ -77,7 +72,7 @@ public class HQueueNotEmpty implements HQueue {
 
     @Override
     public int size() {
-        return size;
+        return forward.size() + backward.size();
     }
 
     @Override
