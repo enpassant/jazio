@@ -5,8 +5,13 @@ import java.util.Optional;
 
 public class HNil implements HList {
     @Override
-    public <R> HItem<R, HNil> add(R value) {
+    public <R> HItem<R, HNil> add(final R value) {
         return HList.of(value);
+    }
+
+    @Override
+    public HList addAll(final HList hlist) {
+        return hlist;
     }
 
     @Override

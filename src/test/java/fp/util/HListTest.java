@@ -41,7 +41,11 @@ public class HListTest {
     public void testBigList() {
         final HList hlist = IntStream.range(0, 100_000)
             .mapToObj(i -> i)
-            .reduce(new HNil(), (HList hl, Integer i) -> hl.add(i), (h1, h2) -> h1);
+            .reduce(
+                new HNil(),
+                (HList hl, Integer i) -> hl.add(i),
+                (h1, h2) -> h1.addAll(h2)
+            );
         final Integer head = hlist.reverse().head();
         Assert.assertEquals(head, (Integer) 0);
     }

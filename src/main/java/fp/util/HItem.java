@@ -35,6 +35,16 @@ public class HItem<T, R extends HList> implements HList {
     }
 
     @Override
+    public HList addAll(final HList hlist) {
+        return hlist.valueStream()
+            .reduce(
+                (HList) this,
+                (hl, i) -> hl.add(i),
+                (h1, h2) -> h1.addAll(h2)
+            );
+    }
+
+    @Override
     public T head() {
         return value1;
     }

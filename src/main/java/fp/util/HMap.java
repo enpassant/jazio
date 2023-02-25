@@ -37,7 +37,7 @@ public class HMap {
             .map(Tuple2.class::cast)
             .filter(tuple -> tuple._1().equals(key))
             .map(tuple -> tuple._2())
-            .reduce((HList) new HNil(), HList::add, (h1, h2) -> h1);
+            .reduce((HList) new HNil(), HList::add, (h1, h2) -> h1.addAll(h2));
     }
 
     @Override

@@ -15,6 +15,8 @@ public interface HList {
 
     <R> HList add(R value);
 
+    HList addAll(HList hlist);
+
     <T> T head();
 
     <T> Optional<T> headOptional();
