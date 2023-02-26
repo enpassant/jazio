@@ -375,34 +375,14 @@ public abstract class IO<C, F, R> {
         });
     }
 
-    public static <C, F, R> IO<C, F, Stream<Either<Cause<F>, R>>> sequencePar(
+    public static <C, F, R> IO<C, F, Stream<R>> sequencePar(
         Stream<IO<C, F, R>> stream
     ) {
-        Builder<Fiber<F, R>> builder = Stream.builder();
         final IO<C, F, Stream<Fiber<F, R>>> fiberStreamIO =
-            sequenceParLoop(builder, stream.iterator(), IO.succeed(null))
-            .flatMap(i -> sequence(builder.build().map(IO::succeed)));
-        return fiberStreamIO.map(s -> s.map(f -> f.getValue()));
-    }
-
-    private static <C, F, R> IO<C, F, Object> sequenceParLoop(
-        Builder<Fiber<F, R>> builder,
-        Iterator<IO<C, F, R>> iterator,
-        IO<C, F, Object> io
-    ) {
-        return IO.<C, F, Boolean>succeed(
-            iterator.hasNext()
-        ).flatMap(hasNext -> {
-            if (hasNext) {
-                final IO<C, F, R> valueIO = iterator.next();
-                final IO<C, F, Object> newIo = io.flatMap(r -> valueIO.fork())
-                    .peek(f -> builder.accept(f))
-                    .map(i -> i);
-                return sequenceParLoop(builder, iterator, newIo);
-            } else {
-                return io;
-            }
-        });
+            IO.sequence(stream.map(io -> io.fork()));
+        return fiberStreamIO.flatMap(s -> IO.sequence(
+            s.map(f -> IO.join(f))
+        ));
     }
 
     public static <C, F, R> IO<C, F, R> sequenceRace(

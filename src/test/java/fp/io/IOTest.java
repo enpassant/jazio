@@ -586,7 +586,7 @@ public class IOTest {
         IO<Object, Failure, Integer> io = IO.sequencePar(streamIO)
             .map(stream ->
                 stream.mapToInt(
-                    r -> r.right() * 2
+                    r -> r * 2
                 ).sum()
             );
 
@@ -600,6 +600,22 @@ public class IOTest {
         Assert.assertTrue(
             "Time was: " + time,
             time < 3 * millis
+        );
+    }
+
+    @Test
+    public void testSequenceParBig() {
+        final int count = 100_000;
+        final Stream<IO<Object, Object, Integer>> streamIO =
+            IntStream.range(0, count).mapToObj(i ->
+                IO.succeed(i)
+            );
+
+        IO<Object, Object, Integer> io = IO.sequencePar(streamIO)
+            .map(stream -> stream.mapToInt(i -> i * 2).sum());
+        Assert.assertEquals(
+            Right.of((count - 1) * count),
+            defaultRuntime.unsafeRun(io)
         );
     }
 
