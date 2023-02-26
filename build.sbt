@@ -1,6 +1,6 @@
 name := """jazio"""
 
-version := "1.0.0-SNAPSHOT"
+version := "1.0.0"
 
 description := "Java IO effect library, inspired by the fantastic ZIO library"
 
@@ -43,7 +43,7 @@ lazy val root = (project in file("."))
   .configs(IntegrationTest)
   .settings(
     publishSettings,
-    javacOptions += "-Xlint:unchecked",
+    //javacOptions += "-Xlint:unchecked",
     javaOptions += "-Xmx512m",
     organization := "io.github.enpassant",
     libraryDependencies ++= Seq(
