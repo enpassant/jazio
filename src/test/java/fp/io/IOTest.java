@@ -7,6 +7,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.Future;
 import java.util.function.Function;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import org.junit.AfterClass;
@@ -553,6 +554,22 @@ public class IOTest {
             .map(stream -> stream.mapToInt(i -> i * 2).sum());
         Assert.assertEquals(
             Right.of(46),
+            defaultRuntime.unsafeRun(io)
+        );
+    }
+
+    @Test
+    public void testSequenceBig() {
+        final int count = 100_000;
+        final Stream<IO<Object, Object, Integer>> streamIO =
+            IntStream.range(0, count).mapToObj(i ->
+                IO.succeed(i)
+            );
+
+        IO<Object, Object, Integer> io = IO.sequence(streamIO)
+            .map(stream -> stream.mapToInt(i -> i * 2).sum());
+        Assert.assertEquals(
+            Right.of((count - 1) * count),
             defaultRuntime.unsafeRun(io)
         );
     }

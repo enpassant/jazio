@@ -345,26 +345,33 @@ public abstract class IO<C, F, R> {
     public static <C, F, R> IO<C, F, Stream<R>> sequence(
         Stream<IO<C, F, R>> stream
     ) {
-        Builder<R> builder = Stream.builder();
-        return sequenceLoop(builder, stream.iterator(), IO.succeed(null));
+        final Builder<R> builder = Stream.builder();
+        final Iterator<IO<C, F, R>> iterator = stream.iterator();
+        if (iterator.hasNext()) {
+            final IO<C, F, R> valueIO = iterator.next();
+            return sequenceLoop(builder, iterator, valueIO);
+        } else {
+            return IO.succeed(Stream.of(null));
+        }
     }
 
     private static <C, F, R> IO<C, F, Stream<R>> sequenceLoop(
-        Builder<R> builder,
-        Iterator<IO<C, F, R>> iterator,
-        IO<C, F, R> io
+        final Builder<R> builder,
+        final Iterator<IO<C, F, R>> iterator,
+        final IO<C, F, R> io
     ) {
-        return IO.<C, F, Boolean>succeed(
-            iterator.hasNext()
-        ).flatMap(hasNext -> {
-            if (hasNext) {
-                final IO<C, F, R> valueIO = iterator.next();
-                final IO<C, F, R> newIo = io.flatMap(r ->
-                    valueIO.peek(value -> builder.accept(value)));
-                return sequenceLoop(builder, iterator, newIo);
-            } else {
-                return io.map(r -> builder.build());
-            }
+        return io.flatMap(value -> {
+            builder.accept(value);
+            return IO.<C, F, Boolean>succeed(
+                iterator.hasNext()
+            ).flatMap(hasNext -> {
+                if (hasNext) {
+                    final IO<C, F, R> valueIO = iterator.next();
+                    return sequenceLoop(builder, iterator, valueIO);
+                } else {
+                    return io.map(r -> builder.build());
+                }
+            });
         });
     }
 
