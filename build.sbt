@@ -1,6 +1,6 @@
 name := """jazio"""
 
-version := "1.0.0"
+version := "1.0.1-SNAPSHOT"
 
 description := "Java IO effect library, inspired by the fantastic ZIO library"
 
