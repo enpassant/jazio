@@ -1,21 +1,18 @@
 package fp.io.test;
 
-import java.time.LocalDate;
-import java.util.logging.Logger;
-
-import fp.io.Environment;
-import fp.io.console.Console;
-import fp.io.console.TestConsole;
 import fp.io.Cause;
+import fp.io.Environment;
 import fp.io.IO;
 import fp.io.IoApp;
+import fp.io.console.Console;
+import fp.io.console.TestConsole;
 import fp.io.log.Log;
 import fp.io.log.TestLog;
 import fp.util.Either;
 import fp.util.Failure;
 import fp.util.HQueue;
-import fp.util.Right;
-import fp.util.Tuple2;
+import java.time.LocalDate;
+import java.util.logging.Logger;
 
 public class TestApp extends IoApp<Object, HQueue> {
     private final boolean isTest;
@@ -26,8 +23,8 @@ public class TestApp extends IoApp<Object, HQueue> {
     }
 
     @Override
-    public IO<Environment, Object, HQueue> program() {
-        final IO<Environment, Object, HQueue> io =
+    public IO<Object, HQueue> program() {
+        final IO<Object, HQueue> io =
             Log.info("Start program").flatMap(l1 ->
             Console.println("Good morning! What is your name?").flatMap(c1 ->
             Console.readLine().flatMap(name ->
@@ -35,7 +32,7 @@ public class TestApp extends IoApp<Object, HQueue> {
             Console.println("Good to meet you, " + name + "!").flatMap(c2 ->
             Console.println("What year were you born?").flatMap(c3 ->
             Console.readLine().flatMap(yearStr ->
-            IO.<Environment,Failure,Integer>effect(
+            IO.<Failure,Integer>effect(
                 () -> LocalDate.now()
                     .minusYears(Integer.parseInt(yearStr))
                     .getYear()
@@ -69,7 +66,7 @@ public class TestApp extends IoApp<Object, HQueue> {
     }
 
     public static void main(String[] args) {
-        final boolean isTest = args.length > 1;
+        final boolean isTest = args.length > 0;
         final TestApp testApp = new TestApp(isTest);
         final Either<Cause<Object>, HQueue> result =
             TestApp.getIoApp().runApp();

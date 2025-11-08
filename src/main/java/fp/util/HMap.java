@@ -10,6 +10,10 @@ public class HMap {
         this.hlist = hlist;
     }
 
+    public static HMap empty() {
+        return new HMap(HList.empty());
+    }
+
     public static <K, V> HMap of(final K key, final V value) {
         final HList hlist = HList.of(Tuple2.of(key, value));
         return new HMap(hlist);
@@ -38,6 +42,10 @@ public class HMap {
             .filter(tuple -> tuple._1().equals(key))
             .map(tuple -> tuple._2())
             .reduce((HList) new HNil(), HList::add, (h1, h2) -> h1.addAll(h2));
+    }
+
+    public HList allValues() {
+        return hlist;
     }
 
     @Override

@@ -29,7 +29,7 @@ public interface HList {
 
     HList reverse();
 
-    default Stream<Object> valueStream() {
+    default <T> Stream<T> valueStream() {
         return Stream.iterate(this, HList::tail)
             .limit(size())
             .map(HList::head);

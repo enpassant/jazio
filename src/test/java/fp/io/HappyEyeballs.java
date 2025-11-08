@@ -35,7 +35,7 @@ import fp.util.Tuple2;
 public class HappyEyeballs {
     final static DefaultPlatform platform = new DefaultPlatform();
 
-    final Runtime<Object> defaultRuntime = new DefaultRuntime<Object>(null, platform);
+    final Runtime defaultRuntime = new DefaultRuntime(null, platform);
 
     static {
         final InputStream is = HappyEyeballs.class.getClassLoader()
@@ -53,7 +53,7 @@ public class HappyEyeballs {
 
     private final static long second = 10000000L;
 
-    private static final List<IO<Object, Failure, String>> tasks =
+    private static final List<IO<Failure, String>> tasks =
         Arrays.asList(
             printSleepPrint(10 * second, "task1"),
             printSleepFail(1 * second, "task2"),
@@ -69,8 +69,8 @@ public class HappyEyeballs {
         platform.shutdown();
     }
 
-    public static <R> IO<Object, Failure, R> run(
-        List<IO<Object, Failure, R>> tasks,
+    public static <R> IO<Failure, R> run(
+        List<IO<Failure, R>> tasks,
         long delay
     ) {
         if (tasks.isEmpty()) {
@@ -84,8 +84,8 @@ public class HappyEyeballs {
         }
     }
 
-    public static <R> IO<Object, Failure, R> run2(
-        final List<IO<Object, Failure, R>> tasks,
+    public static <R> IO<Failure, R> run2(
+        final List<IO<Failure, R>> tasks,
         final long delay
     ) {
         if (tasks.isEmpty()) {
@@ -93,8 +93,8 @@ public class HappyEyeballs {
         } else if (tasks.size() == 1) {
             return tasks.get(0);
         } else {
-            final IO<Object, Failure, Fiber<Failure, Void>> sleepIO =
-                IO.<Object, Failure>sleep(delay).fork();
+            final IO<Failure, Fiber<Failure, Void>> sleepIO =
+                IO.<Failure>sleep(delay).fork();
             return sleepIO.flatMap(sleepFiber ->
                 tasks.get(0).onError(f -> sleepFiber.interruptSleeping())
                 .race(
@@ -105,8 +105,8 @@ public class HappyEyeballs {
         }
     }
 
-    public static IO<Object, Failure, String> printSleepPrint(long sleep, String name) {
-        IO<Object, Failure, String> task = IO.bracket(
+    public static IO<Failure, String> printSleepPrint(long sleep, String name) {
+        IO<Failure, String> task = IO.bracket(
             IO.effectTotal(() -> log("START: " + name)),
             n -> IO.effectTotal(() -> log("Close: " + name)),
             n -> IO.sleep(sleep).flatMap(p2 ->
@@ -116,8 +116,8 @@ public class HappyEyeballs {
         return task.setName(name);
     }
 
-    public static IO<Object, Failure, String> printSleepFail(long sleep, String name) {
-        IO<Object, Failure, String> task = IO.bracket(
+    public static IO<Failure, String> printSleepFail(long sleep, String name) {
+        IO<Failure, String> task = IO.bracket(
             IO.effectTotal(() -> log("START: " + name)),
             n -> IO.effectTotal(() -> log("Close: " + name)),
             n -> IO.sleep(sleep).flatMap(p2 ->
@@ -134,7 +134,7 @@ public class HappyEyeballs {
 
     @Test
     public void testHappySockets() {
-        IO<Object, Failure, Socket> io =
+        IO<Failure, Socket> io =
             IO.effect(() -> Arrays.asList(
                 InetAddress.getAllByName("debian.org")
             )).blocking()
@@ -173,7 +173,7 @@ public class HappyEyeballs {
     @Test
     public void testHappyEyeballs1() {
         log("Start testHappyEyeballs1");
-        IO<Object, Failure, String> io = run(tasks, 2 * second);
+        IO<Failure, String> io = run(tasks, 2 * second);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
         Assert.assertEquals(Right.of("task3"), result);
     }
@@ -181,14 +181,14 @@ public class HappyEyeballs {
     @Test
     public void testHappyEyeballs2() {
         log("Start testHappyEyeballs2");
-        IO<Object, Failure, String> io = run2(tasks, 2 * second);
+        IO<Failure, String> io = run2(tasks, 2 * second);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
         Assert.assertEquals(Right.of("task3"), result);
     }
 
     @Test
     public void testRace() {
-        IO<Object, Failure, Integer> io = slow(100, 2).race(
+        IO<Failure, Integer> io = slow(100, 2).race(
             slow(1, 5)
         );
         Assert.assertEquals(
@@ -197,7 +197,7 @@ public class HappyEyeballs {
         );
     }
 
-    private <A> IO<Object, Failure, A> slow(long millis, A value) {
+    private <A> IO<Failure, A> slow(long millis, A value) {
         return IO.effect(() -> {
             Thread.sleep(millis);
             return value;

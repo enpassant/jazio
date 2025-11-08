@@ -7,9 +7,9 @@ import fp.util.ExceptionFailure;
 import fp.util.Failure;
 import fp.util.Left;
 
-public interface Runtime<C> {
+public interface Runtime {
     @SuppressWarnings("unchecked")
-    default <F, R> Either<Cause<F>, R> unsafeRun(IO<C, F, R> io) {
+    default <F, R> Either<Cause<F>, R> unsafeRun(IO<F, R> io) {
         final Either<Failure, Either<Cause<F>, R>> eitherValue =
             ExceptionFailure.tryCatch(() -> unsafeRunAsync(io).get());
 
@@ -31,9 +31,9 @@ public interface Runtime<C> {
     }
 
     @SuppressWarnings("unchecked")
-    default <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<C, F, R> io) {
+    default <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<F, R> io) {
         FiberContext<F, R> fiberContext = createFiberContext();
-        return fiberContext.runAsync((IO<Object, F, R>) io);
+        return fiberContext.runAsync((IO<F, R>) io);
     }
 
     <F, R> FiberContext<F, R> createFiberContext();

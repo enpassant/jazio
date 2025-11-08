@@ -1,16 +1,5 @@
 package fp.io;
 
-import java.util.Iterator;
-import java.util.Optional;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutorService;
-import java.util.function.BiFunction;
-import java.util.function.Consumer;
-import java.util.function.Function;
-import java.util.function.Supplier;
-import java.util.stream.Stream;
-import java.util.stream.Stream.Builder;
-
 import fp.util.Either;
 import fp.util.ExceptionFailure;
 import fp.util.Failure;
@@ -20,12 +9,21 @@ import fp.util.Statement;
 import fp.util.ThrowingStatement;
 import fp.util.ThrowingSupplier;
 import fp.util.Tuple2;
+import java.util.Iterator;
+import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.Supplier;
+import java.util.stream.Stream;
+import java.util.stream.Stream.Builder;
 
-public abstract class IO<C, F, R> {
+public abstract class IO<F, R> {
     Tag tag;
     Optional<String> nameOptional = Optional.empty();
 
-    public IO<C, F, R> setName(String name) {
+    public IO<F, R> setName(String name) {
         nameOptional = Optional.ofNullable(name);
         return this;
     }
@@ -34,52 +32,74 @@ public abstract class IO<C, F, R> {
         return nameOptional;
     }
 
-    public static <C, F, R> IO<C, F, R> absolve(IO<C, F, Either<F, R>> io) {
+    public static <F, R> IO<F, R> absolve(IO<F, Either<F, R>> io) {
         return io.flatMap(either -> either.fold(
             failure -> IO.fail(Cause.fail(failure)),
             success -> IO.succeed(success)
         ));
     }
 
-    public static <C, F, R> IO<C, F, R> accessM(Function<C, IO<Object, F, R>> fn) {
-        return new Access<C, F, R>(fn);
+    public static <C, F, R> IO<F, R> accessM(
+            Class<C> contextClass,
+            Function<C, IO<F, R>> fn
+    ) {
+        return new Access<C, F, R>(contextClass.getName(), contextClass, fn);
     }
 
-    public static <C, F, R> IO<C, F, R> access(Function<C, R> fn) {
-        return new Access<C, F, R>(r -> IO.succeed(fn.apply(r)));
+    public static <C, F, R> IO<F, R> access(
+            Class<C> contextClass,
+            Function<C, R> fn
+    ) {
+        return new Access<C, F, R>(contextClass.getName(), contextClass, r -> IO.succeed(fn.apply(r)));
     }
 
-    public <R2> IO<C, F, R2> andThen(IO<C, F, R2> fnIO) {
+    public static <C, F, R> IO<F, R> accessM(
+            String context,
+            Class<C> contextClass,
+            Function<C, IO<F, R>> fn
+    ) {
+        return new Access<C, F, R>(context, contextClass, fn);
+    }
+
+    public static <C, F, R> IO<F, R> access(
+            String context,
+            Class<C> contextClass,
+            Function<C, R> fn
+    ) {
+        return new Access<C, F, R>(context, contextClass, r -> IO.succeed(fn.apply(r)));
+    }
+
+    public <R2> IO<F, R2> andThen(IO<F, R2> fnIO) {
         return this.<F, R2>foldM(
             failure -> fnIO,
             success -> fnIO
         );
     }
 
-    public IO<C, F, R> blocking() {
-        return new Blocking<C, F, R>(this);
+    public IO<F, R> blocking() {
+        return new Blocking<F, R>(this);
     }
 
-    public static <C, F, R> IO<C, F, R> succeed(R r) {
-        return new Succeed<C, F, R>(r);
+    public static <F, R> IO<F, R> succeed(R r) {
+        return new Succeed<F, R>(r);
     }
 
-    public <F2> IO<C, F2, Either<F, R>> either() {
+    public <F2> IO<F2, Either<F, R>> either() {
         return foldM(
             failure -> IO.succeed(Left.of(failure)),
             success -> IO.succeed(Right.of(success))
         );
     }
 
-    public static <C, F, R> IO<C, F, R> fail(Cause<F> f) {
-        return new Fail<C, F, R>(f);
+    public static <F, R> IO<F, R> fail(Cause<F> f) {
+        return new Fail<F, R>(f);
     }
 
-    public <F2, R2> IO<C, F2, R2> foldCauseM(
-        Function<Cause<F>, IO<C, F2, R2>> failure,
-        Function<R, IO<C, F2, R2>> success
+    public <F2, R2> IO<F2, R2> foldCauseM(
+        Function<Cause<F>, IO<F2, R2>> failure,
+        Function<R, IO<F2, R2>> success
     ) {
-        return new Fold<C, F, F2, R, R2>(
+        return new Fold<F, F2, R, R2>(
             this,
             failure,
             success
@@ -87,29 +107,29 @@ public abstract class IO<C, F, R> {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
-    public <F2, R2> IO<C, F2, R2> foldM(
-        Function<F, IO<C, F2, R2>> failure,
-        Function<R, IO<C, F2, R2>> success
+    public <F2, R2> IO<F2, R2> foldM(
+        Function<F, IO<F2, R2>> failure,
+        Function<R, IO<F2, R2>> success
     ) {
-        return new Fold<C, F, F2, R, R2>(
+        return new Fold<F, F2, R, R2>(
             this,
             cause -> cause.isFail() ? failure.apply(cause.getValue()) : fail((Cause) cause),
             success
         );
     }
 
-    public IO<C, F, R> peek(Consumer<R> consumer) {
-        return new Peek<C, F, R>(this, consumer);
+    public IO<F, R> peek(Consumer<R> consumer) {
+        return new Peek<F, R>(this, consumer);
     }
 
-    public <R2> IO<C, F, R> peekM(Function<R, IO<C, F, R2>> consumerIO) {
+    public <R2> IO<F, R> peekM(Function<R, IO<F, R2>> consumerIO) {
         return this.foldCauseM(
             cause -> IO.fail(cause),
             success -> consumerIO.apply(success).map(v -> success)
         );
     }
 
-    public IO<C, F, R> peekFailure(Consumer<F> consumer) {
+    public IO<F, R> peekFailure(Consumer<F> consumer) {
         return this.<F, R>foldM(
             failure -> {
                 consumer.accept(failure);
@@ -119,97 +139,97 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public <F2, R2> IO<C, F, R> peekFailureIO(Function<F, IO<C, F2, R2>> ioFn) {
+    public <F2, R2> IO<F, R> peekFailureIO(Function<F, IO<F2, R2>> ioFn) {
         return this.<F, R>foldM(
             failure -> ioFn.apply(failure).<F, R>foldM(
-                f -> IO.<C, F, R>fail(Cause.fail(failure)),
-                s -> IO.<C, F, R>fail(Cause.fail(failure))
+                f -> IO.<F, R>fail(Cause.fail(failure)),
+                s -> IO.<F, R>fail(Cause.fail(failure))
 
             ),
             success -> IO.succeed(success)
         );
     }
 
-    public static <C, F> IO<C, F, Void> effectTotal(Statement statement) {
-        return new EffectTotal<C, F, Void>(() -> { statement.call(); return null; });
+    public static <F> IO<F, Void> effectTotal(Statement statement) {
+        return new EffectTotal<F, Void>(() -> { statement.call(); return null; });
     }
 
-    public static <C, F extends Failure> IO<C, F, Void> effect(
+    public static <F extends Failure> IO<F, Void> effect(
         ThrowingStatement<Throwable> statement
     ) {
-        return new EffectPartial<C, F, Void>(() -> { statement.call(); return null; });
+        return new EffectPartial<F, Void>(() -> { statement.call(); return null; });
     }
 
-    public static <C, F, R> IO<C, F, R> effectTotal(Supplier<R> supplier) {
-        return new EffectTotal<C, F, R>(supplier);
+    public static <F, R> IO<F, R> effectTotal(Supplier<R> supplier) {
+        return new EffectTotal<F, R>(supplier);
     }
 
-    public static <C, F extends Failure, R> IO<C, F, R> effect(
+    public static <F extends Failure, R> IO<F, R> effect(
         ThrowingSupplier<R, Throwable> supplier
     ) {
-        return new EffectPartial<C, F, R>(supplier);
+        return new EffectPartial<F, R>(supplier);
     }
 
-    public <F2, R2> IO<C, F2, R2> flatMap(Function<R, IO<C, F2, R2>> fn) {
-        return new FlatMap<C, F, F2, R, R2>(this, fn);
+    public <F2, R2> IO<F2, R2> flatMap(Function<R, IO<F2, R2>> fn) {
+        return new FlatMap<F, F2, R, R2>(this, fn);
     }
 
-    public IO<C, F, Fiber<F, R>> fork() {
-        return new Fork<C, F, R>(this);
+    public IO<F, Fiber<F, R>> fork() {
+        return new Fork<F, R>(this);
     }
 
-    public static <C, F, R> IO<C, F, R> join(Fiber<F, R> fiber) {
-        return new Join<C, F, R>(fiber);
+    public static <F, R> IO<F, R> join(Fiber<F, R> fiber) {
+        return new Join<F, R>(fiber);
     }
 
-    public static <C, F, R> IO<C, F, R> halt(Cause<F> cause) {
-        return new Fail<C, F, R>(cause);
+    public static <F, R> IO<F, R> halt(Cause<F> cause) {
+        return new Fail<F, R>(cause);
     }
 
-    public static <C, F, R> IO<C, F, R> interrupt() {
-        return new Fail<C, F, R>(Cause.interrupt());
+    public static <F, R> IO<F, R> interrupt() {
+        return new Fail<F, R>(Cause.interrupt());
     }
 
-    public IO<C, F, R> interruptible() {
-        return new InterruptStatus<C, F, R>(this, true);
+    public IO<F, R> interruptible() {
+        return new InterruptStatus<F, R>(this, true);
     }
 
-    public IO<C, F, R> uninterruptible() {
-        return new InterruptStatus<C, F, R>(this, false);
+    public IO<F, R> uninterruptible() {
+        return new InterruptStatus<F, R>(this, false);
     }
 
-    public IO<C, F, R> checkInterrupt(
-        Function<InterruptStatus<C, F, R>, IO<Object, F, R>> fn
+    public IO<F, R> checkInterrupt(
+        Function<InterruptStatus<F, R>, IO<F, R>> fn
     ) {
-        return new CheckInterrupt<C, F, R>(fn);
+        return new CheckInterrupt<F, R>(fn);
     }
 
-    public <R2> IO<C, F, R2> map(Function<R, R2> fn) {
-        return new FlatMap<C, F, F, R, R2>(this, r -> IO.succeed(fn.apply(r)));
+    public <R2> IO<F, R2> map(Function<R, R2> fn) {
+        return new FlatMap<F, F, R, R2>(this, r -> IO.succeed(fn.apply(r)));
     }
 
-    public <F2> IO<C, F2, R> mapFailure(Function<F, Cause<F2>> fn) {
+    public <F2> IO<F2, R> mapFailure(Function<F, Cause<F2>> fn) {
         return foldM(
             failure -> IO.fail(fn.apply(failure)),
             success -> IO.succeed(success)
         );
     }
 
-    public IO<C, F, R> onError(Consumer<Cause<F>> fn) {
+    public IO<F, R> onError(Consumer<Cause<F>> fn) {
         return this.<F, R>foldCauseM(
             failure -> { fn.accept(failure); return IO.fail(failure); },
             success -> IO.succeed(success)
         );
     }
 
-    //public IO<C, F, R> on(ExecutorService executor) {
-        //return new Lock<C, F, R>(this, executor);
+    //public IO<F, R> on(ExecutorService executor) {
+        //return new Lock<F, R>(this, executor);
     //}
 
-    public static <C, F, A, R, R2> IO<C, F, R> bracket(
-        IO<C, F, A> acquire,
-        Function<A, IO<C, F, R2>> release,
-        Function<A, IO<C, F, R>> use
+    public static <F, A, R, R2> IO<F, R> bracket(
+        IO<F, A> acquire,
+        Function<A, IO<F, R2>> release,
+        Function<A, IO<F, R>> use
     ) {
         return acquire.uninterruptible().flatMap(a ->
             use.apply(a).foldCauseM(
@@ -225,16 +245,20 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public <C2> IO<C2, F, R> provide(C context) {
-        return new Provide<C, C2, F, R>(context, this);
+    public <C> IO<F, R> provide(Class<C> contextClass, C contextValue) {
+        return new Provide<C, F, R>(contextClass.getName(), contextClass, contextValue, this);
     }
 
-    public IO<C, F, R> race(
-        IO<C, F, R> that
+    public <C> IO<F, R> provide(String context, Class<C> contextClass, C contextValue) {
+        return new Provide<C, F, R>(context, contextClass, contextValue, this);
+    }
+
+    public IO<F, R> race(
+        IO<F, R> that
     ) {
         return this.fork().flatMap(fiber ->
             that.fork().flatMap(fiberThat ->
-                IO.<C, Failure, RaceResult<F, R, R>>effect(() ->
+                IO.<Failure, RaceResult<F, R, R>>effect(() ->
                     fiber.raceWith(fiberThat).get()
                 ).mapFailure(failure -> Cause.die((ExceptionFailure) failure))
                 .flatMap(raceResult -> {
@@ -253,12 +277,12 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public IO<C, F, R> raceAttempt(
-        IO<C, F, R> that
+    public IO<F, R> raceAttempt(
+        IO<F, R> that
     ) {
         return fork().flatMap(fiber ->
             that.fork().<F, R>flatMap(fiberThat ->
-                IO.<C, Failure, RaceResult<F, R, R>>effect(() ->
+                IO.<Failure, RaceResult<F, R, R>>effect(() ->
                     fiber.raceWith(fiberThat).get()
                 ).<F>mapFailure(failure -> Cause.<F>die((ExceptionFailure) failure))
                 .peek(raceResult -> raceResult.getLooser().interrupt())
@@ -273,7 +297,7 @@ public abstract class IO<C, F, R> {
     }
 
     @SuppressWarnings("unchecked")
-    public <F2, R2> IO<C, F2, R2> recover(Function<F, IO<C, F2, R2>> fn) {
+    public <F2, R2> IO<F2, R2> recover(Function<F, IO<F2, R2>> fn) {
         return foldM(
             fn,
             success -> IO.succeed((R2) success)
@@ -281,15 +305,15 @@ public abstract class IO<C, F, R> {
     }
 
     @SuppressWarnings("unchecked")
-    public <F2, R2> IO<C, F2, R2> recoverCause(Function<Cause<F>, IO<C, F2, R2>> fn) {
+    public <F2, R2> IO<F2, R2> recoverCause(Function<Cause<F>, IO<F2, R2>> fn) {
         return foldCauseM(
             fn,
             success -> IO.succeed((R2) success)
         );
     }
 
-    public static <C, F> IO<C, F, Void> sleep(long nanoseconds) {
-        return new Schedule<C, F, Void>(
+    public static <F> IO<F, Void> sleep(long nanoseconds) {
+        return new Schedule<F, Void>(
             IO.unit(),
             new Scheduler.Delayer(nanoseconds),
             schedule -> f -> IO.fail(f),
@@ -297,8 +321,8 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public IO<C, F, R> delay(long nanoseconds) {
-        return new Schedule<C, F, R>(
+    public IO<F, R> delay(long nanoseconds) {
+        return new Schedule<F, R>(
             this,
             new Scheduler.Delayer(nanoseconds),
             schedule -> f -> IO.fail(f),
@@ -306,12 +330,12 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public IO<C, F, R> repeat(int count) {
-        return new Schedule<C, F, R>(
+    public IO<F, R> repeat(int count) {
+        return new Schedule<F, R>(
             this,
             new Scheduler.Counter(count),
             schedule -> f -> IO.fail(f),
-            schedule -> s -> new IO.Schedule<C, F, R>(
+            schedule -> s -> new IO.Schedule<F, R>(
                 schedule.io,
                 schedule.scheduler.updateState(),
                 schedule.failure,
@@ -320,11 +344,11 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public IO<C, F, R> retry(int count) {
-        return new Schedule<C, F, R>(
+    public IO<F, R> retry(int count) {
+        return new Schedule<F, R>(
             this,
             new Scheduler.Counter(count),
-            schedule -> f -> new IO.Schedule<C, F, R>(
+            schedule -> f -> new IO.Schedule<F, R>(
                 schedule.io,
                 schedule.scheduler.updateState(),
                 schedule.failure,
@@ -334,39 +358,39 @@ public abstract class IO<C, F, R> {
         );
     }
 
-    public IO<C, F, R> schedule(
+    public IO<F, R> schedule(
         final Scheduler scheduler,
-        Function<Schedule<C, F, R>, Function<Cause<F>, IO<C, F, R>>> failure,
-        Function<Schedule<C, F, R>, Function<R, IO<C, F, R>>> success
+        Function<Schedule<F, R>, Function<Cause<F>, IO<F, R>>> failure,
+        Function<Schedule<F, R>, Function<R, IO<F, R>>> success
     ) {
-        return new Schedule<C, F, R>(this, scheduler, failure, success);
+        return new Schedule<F, R>(this, scheduler, failure, success);
     }
 
-    public static <C, F, R> IO<C, F, Stream<R>> sequence(
-        Stream<IO<C, F, R>> stream
+    public static <F, R> IO<F, Stream<R>> sequence(
+        Stream<IO<F, R>> stream
     ) {
         final Builder<R> builder = Stream.builder();
-        final Iterator<IO<C, F, R>> iterator = stream.iterator();
+        final Iterator<IO<F, R>> iterator = stream.iterator();
         if (iterator.hasNext()) {
-            final IO<C, F, R> valueIO = iterator.next();
+            final IO<F, R> valueIO = iterator.next();
             return sequenceLoop(builder, iterator, valueIO);
         } else {
-            return IO.succeed(Stream.of(null));
+            return IO.succeed(Stream.of());
         }
     }
 
-    private static <C, F, R> IO<C, F, Stream<R>> sequenceLoop(
+    private static <F, R> IO<F, Stream<R>> sequenceLoop(
         final Builder<R> builder,
-        final Iterator<IO<C, F, R>> iterator,
-        final IO<C, F, R> io
+        final Iterator<IO<F, R>> iterator,
+        final IO<F, R> io
     ) {
         return io.flatMap(value -> {
             builder.accept(value);
-            return IO.<C, F, Boolean>succeed(
+            return IO.<F, Boolean>succeed(
                 iterator.hasNext()
             ).flatMap(hasNext -> {
                 if (hasNext) {
-                    final IO<C, F, R> valueIO = iterator.next();
+                    final IO<F, R> valueIO = iterator.next();
                     return sequenceLoop(builder, iterator, valueIO);
                 } else {
                     return io.map(r -> builder.build());
@@ -375,26 +399,26 @@ public abstract class IO<C, F, R> {
         });
     }
 
-    public static <C, F, R> IO<C, F, Stream<R>> sequencePar(
-        Stream<IO<C, F, R>> stream
+    public static <F, R> IO<F, Stream<R>> sequencePar(
+        Stream<IO<F, R>> stream
     ) {
-        final IO<C, F, Stream<Fiber<F, R>>> fiberStreamIO =
+        final IO<F, Stream<Fiber<F, R>>> fiberStreamIO =
             IO.sequence(stream.map(io -> io.fork()));
         return fiberStreamIO.flatMap(s -> IO.sequence(
             s.map(f -> IO.join(f))
         ));
     }
 
-    public static <C, F, R> IO<C, F, R> sequenceRace(
-        Stream<IO<C, F, R>> stream
+    public static <F, R> IO<F, R> sequenceRace(
+        Stream<IO<F, R>> stream
     ) {
         Builder<Fiber<F, R>> builder = Stream.builder();
         CompletableFuture<Fiber<F, R>> winner = new CompletableFuture<>();
-        final IO<C, F, Stream<Fiber<F, R>>> fiberStreamIO =
+        final IO<F, Stream<Fiber<F, R>>> fiberStreamIO =
             sequenceRaceLoop(builder, winner, stream.iterator(), IO.succeed(null))
             .flatMap(i -> sequence(builder.build().map(IO::succeed)));
         return fiberStreamIO.flatMap(streamFiber ->
-            IO.<C, Failure, Either<Cause<F>, R>>effect(() -> winner.thenApply(winnerFiber -> {
+            IO.<Failure, Either<Cause<F>, R>>effect(() -> winner.thenApply(winnerFiber -> {
                 streamFiber
                     .filter(f -> f != winnerFiber)
                     .peek(f -> f.interrupt());
@@ -407,18 +431,18 @@ public abstract class IO<C, F, R> {
         ));
     }
 
-    private static <C, F, R> IO<C, F, Object> sequenceRaceLoop(
+    private static <F, R> IO<F, Object> sequenceRaceLoop(
         Builder<Fiber<F, R>> builder,
         CompletableFuture<Fiber<F, R>> winner,
-        Iterator<IO<C, F, R>> iterator,
-        IO<C, F, Object> io
+        Iterator<IO<F, R>> iterator,
+        IO<F, Object> io
     ) {
-        return IO.<C, F, Boolean>succeed(
+        return IO.<F, Boolean>succeed(
             iterator.hasNext()
         ).flatMap(hasNext -> {
             if (hasNext) {
-                final IO<C, F, R> valueIO = iterator.next();
-                final IO<C, F, Object> newIo = io.flatMap(r -> valueIO.fork())
+                final IO<F, R> valueIO = iterator.next();
+                final IO<F, Object> newIo = io.flatMap(r -> valueIO.fork())
                     .peek(f -> builder.accept(f))
                     .peek(f -> f.register(winner))
                     .map(i -> i);
@@ -429,18 +453,18 @@ public abstract class IO<C, F, R> {
         });
     }
 
-    public IO<C, F, R> timeout(long nanoseconds) {
+    public IO<F, R> timeout(long nanoseconds) {
         return raceAttempt(
-            IO.<C, F, R>unit().delay(nanoseconds)
+            IO.<F, R>unit().delay(nanoseconds)
         );
     }
 
-    public static <C, F, R> IO<C, F, R> unit() {
-        return new Succeed<C, F, R>(null);
+    public static <F, R> IO<F, R> unit() {
+        return new Succeed<F, R>(null);
     }
 
-    public <F2, R2> IO<C, F2, Tuple2<R, R2>> zip(
-        IO<C, F2, R2> that
+    public <F2, R2> IO<F2, Tuple2<R, R2>> zip(
+        IO<F2, R2> that
     ) {
         return this.flatMap(r ->
             that.map(r2 ->
@@ -448,8 +472,8 @@ public abstract class IO<C, F, R> {
         ));
     }
 
-    public <F2, R2, R3> IO<C, F2, R3> zipWith(
-        IO<C, F2, R2> that,
+    public <F2, R2, R3> IO<F2, R3> zipWith(
+        IO<F2, R2> that,
         BiFunction<R, R2, R3> fn
     ) {
         return this.flatMap(r ->
@@ -458,8 +482,8 @@ public abstract class IO<C, F, R> {
         ));
     }
 
-    public <R2> IO<C, F, Tuple2<R, R2>> zipPar(
-        IO<C, F, R2> that
+    public <R2> IO<F, Tuple2<R, R2>> zipPar(
+        IO<F, R2> that
     ) {
         return this.fork().flatMap(fiber ->
             that.fork().flatMap(fiberThat -> {
@@ -471,16 +495,16 @@ public abstract class IO<C, F, R> {
                     f.getCompletedValue().forEachLeft(
                         fail -> fiber.interrupt())
                 );
-                return IO.<C, F, R>join(fiber).flatMap((R value) ->
-                IO.<C, F, R2>join(fiberThat) .map((R2 valueThat) ->
+                return IO.<F, R>join(fiber).flatMap((R value) ->
+                IO.<F, R2>join(fiberThat) .map((R2 valueThat) ->
                 Tuple2.of(value, valueThat)
                 ));
             })
         );
     }
 
-    public <R2, R3> IO<C, F, R3> zipParWith(
-        IO<C, F, R2> that,
+    public <R2, R3> IO<F, R3> zipParWith(
+        IO<F, R2> that,
         BiFunction<R, R2, R3> fn
     ) {
         return zipPar(that)
@@ -511,15 +535,23 @@ public abstract class IO<C, F, R> {
         Uninterruptible
     }
 
-    static class Access<C, F, R> extends IO<C, F, R> {
-        final Function<C, IO<Object, F, R>> fn;
-        public Access(Function<C, IO<Object, F, R>> fn) {
+    static class Access<C, F, R> extends IO<F, R> {
+        final String context;
+        final Class<C> contextClass;
+        final Function<C, IO<F, R>> fn;
+        public Access(
+                String context,
+                Class<C> contextClass,
+                Function<C, IO<F, R>> fn
+        ) {
             tag = Tag.Access;
+            this.context = context;
+            this.contextClass = contextClass;
             this.fn = fn;
         }
     }
 
-    static class Succeed<C, F, R> extends IO<C, F, R> {
+    static class Succeed<F, R> extends IO<F, R> {
         final R r;
         public Succeed(R r) {
             tag = Tag.Pure;
@@ -527,7 +559,7 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class Fail<C, F, R> extends IO<C, F, R> {
+    static class Fail<F, R> extends IO<F, R> {
         final Cause<F> f;
         public Fail(Cause<F> f) {
             tag = Tag.Fail;
@@ -535,7 +567,7 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class EffectTotal<C, F, R> extends IO<C, F, R> {
+    static class EffectTotal<F, R> extends IO<F, R> {
         final Supplier<R> supplier;
 
         public EffectTotal(Supplier<R> supplier) {
@@ -544,7 +576,7 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class EffectPartial<C, F extends Failure, R> extends IO<C, F, R> {
+    static class EffectPartial<F extends Failure, R> extends IO<F, R> {
         final ThrowingSupplier<R, Throwable> supplier;
 
         public EffectPartial(ThrowingSupplier<R, Throwable> supplier) {
@@ -553,31 +585,31 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class Blocking<C, F, R>
-        extends IO<C, F, R>
+    static class Blocking<F, R>
+        extends IO<F, R>
     {
-        IO<C, F, R> io;
+        IO<F, R> io;
 
         public Blocking(
-            IO<C, F, R> io
+            IO<F, R> io
         ) {
             tag = Tag.Blocking;
             this.io = io;
         }
     }
 
-    static class Fold<C, F, F2, A, R>
-        extends IO<C, F2, R>
-        implements Function<A, IO<C, F2, R>>
+    static class Fold<F, F2, A, R>
+        extends IO<F2, R>
+        implements Function<A, IO<F2, R>>
     {
-        IO<C, F, A> io;
-        Function<Cause<F>, IO<C, F2, R>> failure;
-        Function<A, IO<C, F2, R>> success;
+        IO<F, A> io;
+        Function<Cause<F>, IO<F2, R>> failure;
+        Function<A, IO<F2, R>> success;
 
         public Fold(
-            IO<C, F, A> io,
-            Function<Cause<F>, IO<C, F2, R>> failure,
-            Function<A, IO<C, F2, R>> success
+            IO<F, A> io,
+            Function<Cause<F>, IO<F2, R>> failure,
+            Function<A, IO<F2, R>> success
         ) {
             tag = Tag.Fold;
             this.io = io;
@@ -586,18 +618,18 @@ public abstract class IO<C, F, R> {
         }
 
         @Override
-        public IO<C, F2, R> apply(A a) {
+        public IO<F2, R> apply(A a) {
             return success.apply(a);
         }
     }
 
-    static class Fork<C, F, R>
-        extends IO<C, F, Fiber<F, R>>
+    static class Fork<F, R>
+        extends IO<F, Fiber<F, R>>
     {
-        IO<C, F, R> io;
+        IO<F, R> io;
 
         public Fork(
-            IO<C, F, R> io
+            IO<F, R> io
         ) {
             tag = Tag.Fork;
             this.io = io;
@@ -609,11 +641,11 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class FlatMap<C, F, F2, R, R2> extends IO<C, F2, R2> {
-        final IO<C, F, R> io;
-        final Function<R, IO<C, F2, R2>> fn;
+    static class FlatMap<F, F2, R, R2> extends IO<F2, R2> {
+        final IO<F, R> io;
+        final Function<R, IO<F2, R2>> fn;
 
-        public FlatMap(IO<C, F, R> io, Function<R, IO<C, F2, R2>> fn) {
+        public FlatMap(IO<F, R> io, Function<R, IO<F2, R2>> fn) {
             tag = Tag.FlatMap;
             this.io = io;
             this.fn = fn;
@@ -625,12 +657,12 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class InterruptStatus<C, F, R> extends IO<C, F, R> {
-        final IO<C, F, R> io;
+    static class InterruptStatus<F, R> extends IO<F, R> {
+        final IO<F, R> io;
         final boolean flag;
 
         public InterruptStatus(
-            final IO<C, F, R> io,
+            final IO<F, R> io,
             final boolean flag
         ) {
             tag = Tag.InterruptStatus;
@@ -639,16 +671,16 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    static class CheckInterrupt<C, F, R> extends IO<C, F, R> {
-        final Function<InterruptStatus<C, F, R>, IO<Object, F, R>> fn;
+    static class CheckInterrupt<F, R> extends IO<F, R> {
+        final Function<InterruptStatus<F, R>, IO<F, R>> fn;
 
-        public CheckInterrupt(Function<InterruptStatus<C, F, R>, IO<Object, F, R>> fn) {
+        public CheckInterrupt(Function<InterruptStatus<F, R>, IO<F, R>> fn) {
             tag = Tag.CheckInterrupt;
             this.fn = fn;
         }
     }
 
-    static class Join<C, F, R> extends IO<C, F, R> {
+    static class Join<F, R> extends IO<F, R> {
         final Fiber<F, R> fiber;
 
         public Join(final Fiber<F, R> fiber) {
@@ -657,49 +689,58 @@ public abstract class IO<C, F, R> {
         }
     }
 
-    //static class Lock<C, F, R> extends IO<C, F, R> {
-        //final IO<C, F, R> io;
+    //static class Lock<F, R> extends IO<F, R> {
+        //final IO<F, R> io;
         //final ExecutorService executor;
-        //public Lock(IO<C, F, R> io, ExecutorService executor) {
+        //public Lock(IO<F, R> io, ExecutorService executor) {
             //tag = Tag.Lock;
             //this.io = io;
             //this.executor = executor;
         //}
     //}
 
-    static class Peek<C, F, R> extends IO<C, F, R> {
-        final IO<C, F, R> io;
+    static class Peek<F, R> extends IO<F, R> {
+        final IO<F, R> io;
         final Consumer<R> consumer;
 
-        public Peek(IO<C, F, R> io, Consumer<R> consumer) {
+        public Peek(IO<F, R> io, Consumer<R> consumer) {
             tag = Tag.Peek;
             this.io = io;
             this.consumer = consumer;
         }
     }
 
-    static class Provide<C, C2, F, R> extends IO<C2, F, R> {
-        final C context;
-        final IO<C, F, R> next;
+    static class Provide<C, F, R> extends IO<F, R> {
+        final String context;
+        final Class<C> contextClass;
+        final Object contextValue;
+        final IO<F, R> next;
 
-        public Provide(C context, IO<C, F, R> next) {
+        public Provide(
+                String context,
+                Class<C> contextClass,
+                Object contextValue,
+                IO<F, R> next
+        ) {
             tag = Tag.Provide;
             this.context = context;
+            this.contextClass = contextClass;
+            this.contextValue = contextValue;
             this.next = next;
         }
     }
 
-    static class Schedule<C, F, R> extends IO<C, F, R> {
-        final IO<C, F, R> io;
+    static class Schedule<F, R> extends IO<F, R> {
+        final IO<F, R> io;
         final Scheduler scheduler;
-        final Function<Schedule<C, F, R>, Function<Cause<F>, IO<C, F, R>>> failure;
-        final Function<Schedule<C, F, R>, Function<R, IO<C, F, R>>> success;
+        final Function<Schedule<F, R>, Function<Cause<F>, IO<F, R>>> failure;
+        final Function<Schedule<F, R>, Function<R, IO<F, R>>> success;
 
         public Schedule(
-            final IO<C, F, R> io,
+            final IO<F, R> io,
             final Scheduler scheduler,
-            final Function<Schedule<C, F, R>, Function<Cause<F>, IO<C, F, R>>> failure,
-            final Function<Schedule<C, F, R>, Function<R, IO<C, F, R>>> success
+            final Function<Schedule<F, R>, Function<Cause<F>, IO<F, R>>> failure,
+            final Function<Schedule<F, R>, Function<R, IO<F, R>>> success
         ) {
             tag = Tag.Schedule;
             this.io = io;

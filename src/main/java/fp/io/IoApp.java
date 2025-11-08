@@ -20,13 +20,15 @@ public abstract class IoApp<F, R> {
         return ioApp;
     }
 
-    public abstract IO<Environment, F, R> program();
+    public abstract IO<F, R> program();
 
     public Either<Cause<F>, R> runApp() {
         try {
             final Either<Cause<F>, R> result =
                 getRuntime().unsafeRun(
-                    program().provide(getEnvironment())
+                    getEnvironment().provides(
+                        program()
+                    )
                 );
             return result;
         } finally {
@@ -44,8 +46,8 @@ public abstract class IoApp<F, R> {
         return new DefaultPlatform();
     }
 
-    protected Runtime<R> newRuntime() {
-        return new DefaultRuntime<R>(null, getPlatform());
+    protected Runtime newRuntime() {
+        return new DefaultRuntime(null, getPlatform());
     }
 
     public Environment getEnvironment() {
@@ -62,7 +64,7 @@ public abstract class IoApp<F, R> {
         return platform;
     }
 
-    public Runtime<R> getRuntime() {
+    public Runtime getRuntime() {
         if (runtime == null) {
             runtime = newRuntime();
         }

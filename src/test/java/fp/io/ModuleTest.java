@@ -1,5 +1,6 @@
 package fp.io;
 
+import fp.util.HMap;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
@@ -14,9 +15,6 @@ import fp.util.Right;
 public class ModuleTest {
     final static DefaultPlatform platform = new DefaultPlatform();
 
-    final Runtime<Void> defaultVoidRuntime =
-        new DefaultRuntime<Void>(null, platform);
-
     @AfterClass
     public static void setUp() {
         platform.shutdown();
@@ -24,7 +22,7 @@ public class ModuleTest {
 
     @Test
     public void testModules() {
-        IO<Environment, Object, String> io =
+        IO<Object, String> io =
             Log.info("Start program").flatMap(l1 ->
             Console.println("Good morning, what is your name?").flatMap(c1 ->
             Console.readLine().flatMap(name ->
@@ -37,22 +35,30 @@ public class ModuleTest {
         final TestConsole testConsole = new TestConsole("John");
         final TestLog testLog = new TestLog();
 
-        final Environment environment =
-            Environment.of(Console.Service.class, testConsole)
-                .and(Log.Service.class, testLog);
+        final HMap environment =
+            HMap.of(Console.Service.class.getName(), testConsole)
+                .add(Log.Service.class.getName(), testLog);
+
+        final Runtime defaultRuntime =
+                new DefaultRuntime(environment, platform);
 
         final Either<Cause<Object>, String> name =
-            defaultVoidRuntime.unsafeRun(io.provide(environment));
+            defaultRuntime.unsafeRun(io);
 
         Assert.assertEquals(Right.of("John"), name);
         Assert.assertEquals(
-            "Good morning, what is your name?\n" + "Good to meet you, John!\n",
+                """
+                        Good morning, what is your name?
+                        Good to meet you, John!
+                        """,
             testConsole.getOutputs()
         );
         Assert.assertEquals(
-            "[Info] Start program\n" +
-            "[Debug] User's name: John\n" +
-            "[Info] Program has finished\n",
+                """
+                        [Info] Start program
+                        [Debug] User's name: John
+                        [Info] Program has finished
+                        """,
             testLog.getOutputs()
         );
     }

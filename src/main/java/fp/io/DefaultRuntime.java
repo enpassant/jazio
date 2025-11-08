@@ -1,19 +1,17 @@
 package fp.io;
 
-import java.util.concurrent.ForkJoinPool;
+import fp.util.Either;
+import fp.util.ExceptionFailure;
+import fp.util.HMap;
+import fp.util.Left;
 import java.util.concurrent.ForkJoinTask;
 import java.util.concurrent.Future;
 
-import fp.util.Either;
-import fp.util.ExceptionFailure;
-import fp.util.Failure;
-import fp.util.Left;
-
-public class DefaultRuntime<C> implements Runtime<C> {
-    private final C context;
+public class DefaultRuntime implements Runtime {
+    private final HMap context;
     private final Platform platform;
 
-    public DefaultRuntime(C context, Platform platform) {
+    public DefaultRuntime(HMap context, Platform platform) {
         this.context = context;
         this.platform = platform;
     }
@@ -27,12 +25,12 @@ public class DefaultRuntime<C> implements Runtime<C> {
         return fiberContext;
     }
 
-    public <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<C, F, R> io) {
+    public <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<F, R> io) {
         final FiberContext<F, R> fiberContext = createFiberContext();
-        return fiberContext.runAsync((IO<Object, F, R>) io);
+        return fiberContext.runAsync((IO<F, R>) io);
     }
 
-    public <F, R> Either<Cause<F>, R> unsafeRun(IO<C, F, R> io) {
+    public <F, R> Either<Cause<F>, R> unsafeRun(IO<F, R> io) {
         return ExceptionFailure.tryCatch(() ->
             ((ForkJoinTask<Either<Cause<F>, R>>) unsafeRunAsync(io)).get()
         ).fold(

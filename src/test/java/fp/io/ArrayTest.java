@@ -12,7 +12,7 @@ import fp.util.Right;
 */
 public class ArrayTest {
     final static DefaultPlatform platform = new DefaultPlatform();
-    final Runtime<Object> runtime = new DefaultRuntime<Object>(null, platform);
+    final Runtime runtime = new DefaultRuntime(null, platform);
 
     @AfterClass
     public static void setUp() {
@@ -28,7 +28,7 @@ public class ArrayTest {
         final int[] array = incrementArray(SIZE);
         final int threshold = 100_000;
 
-        final IO<Object, Void, Integer> io =
+        final IO<Void, Integer> io =
             compute(array, 0, SIZE, threshold);
 
         Assert.assertEquals(
@@ -37,7 +37,7 @@ public class ArrayTest {
         );
     }
 
-    private static IO<Object, Void, Integer> compute(
+    private static IO<Void, Integer> compute(
         final int[] array,
         final int start,
         final int end,

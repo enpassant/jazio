@@ -1,6 +1,5 @@
 package fp.io.console;
 
-import fp.io.Environment;
 import fp.io.IO;
 import fp.util.Failure;
 
@@ -14,11 +13,11 @@ public class TestConsole implements Console.Service {
     }
 
     @Override
-    public IO<Object, Object, Void> println(String line) {
+    public IO<Object, Void> println(String line) {
         return IO.effectTotal(() -> { sb.append(line).append("\n"); });
     }
     @Override
-    public IO<Object, Failure, String> readLine() {
+    public IO<Failure, String> readLine() {
         return IO.effect(() -> inputs[inputIndex++]);
     }
     public String getOutputs() {
