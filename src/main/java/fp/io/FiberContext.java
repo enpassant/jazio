@@ -29,8 +29,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
-    implements Fiber<F, R>, ForkJoinPool.ManagedBlocker
-{
+        implements Fiber<F, R>, ForkJoinPool.ManagedBlocker {
     private static volatile long counter = 0;
     private final long number;
 
@@ -42,25 +41,25 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     private Object value = null;
     private Object valueLast = null;
     private ScheduledFuture<?> scheduledFuture = null;
-    private CompletableFuture<Void> mainFuture = null;
+    private final CompletableFuture<Void> mainFuture = null;
     private final CompletableFuture<Fiber<F, R>> observer =
-        new CompletableFuture<Fiber<F, R>>();
+            new CompletableFuture<>();
     private final AtomicReference<FiberState<F, R>> state;
 
     private final Deque<HMap> environments = new ArrayDeque<>();
-    private Deque<Function<?, IO<?, ?>>> stack =
-        new ArrayDeque<Function<?, IO<?, ?>>>();
+    private final Deque<Function<?, IO<?, ?>>> stack =
+            new ArrayDeque<>();
 
-    private Deque<Boolean> interruptStatus = new ArrayDeque<Boolean>();
+    private final Deque<Boolean> interruptStatus = new ArrayDeque<>();
     private volatile boolean interrupted = false;
-    private Thread thread = null;
-    private Stream.Builder<Future<?>> streamFuture = Stream.<Future<?>>builder();
-    private List<Fiber<?, ?>> fiberList = new ArrayList();
+    private Thread thread;
+    private final Stream.Builder<Future<?>> streamFuture = Stream.builder();
+    private final List<Fiber<?, ?>> fiberList = new ArrayList<>();
 
     public FiberContext(
-        ExecutorService executor,
-        HMap context,
-        Platform platform
+            ExecutorService executor,
+            HMap context,
+            Platform platform
     ) {
         super();
         counter++;
@@ -70,21 +69,21 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         this.thread = Thread.currentThread();
         LOG.finest("Fiber " + number + " has started. " + thread.getName());
         environments.add(
-            Objects.requireNonNullElseGet(context, HMap::empty)
+                Objects.requireNonNullElseGet(context, HMap::empty)
         );
         this.platform = platform;
 
         final List<CompletableFuture<Fiber<F, R>>> observers =
-            new ArrayList<>();
+                new ArrayList<>();
         observers.add(observer);
 
         state = new AtomicReference<>(
-            new Executing<F, R>(
-                FiberStatus.Running, observers)
+                new Executing<>(
+                        FiberStatus.Running, observers)
         );
     }
 
-    public <F2, R2> Future<Either<Cause<F>, R>> runAsync(IO<F, R> io) {
+    public Future<Either<Cause<F>, R>> runAsync(IO<F, R> io) {
         curIo = io;
         return ((ForkJoinPool) executor).submit(this);
     }
@@ -101,7 +100,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                 if (curIo.tag == Tag.Fail || !shouldInterrupt()) {
                     Optional<String> nameOptional = curIo.getNameOptional();
                     nameOptional.ifPresent(name ->
-                        LOG.finer("Fiber " + number + " IO: " + name)
+                            LOG.finer("Fiber " + number + " IO: " + name)
                     );
                     switch (curIo.tag) {
                         case Access: {
@@ -114,9 +113,9 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                                     curIo = accessIo.fn.apply(accessIo.contextClass.cast(o));
                                 } else {
                                     curIo = IO.fail(Cause.fail(
-                                        "Wrong context class: %1$s".formatted(
-                                                accessIo.contextClass
-                                        )
+                                            "Wrong context class: %1$s".formatted(
+                                                    accessIo.contextClass
+                                            )
                                     ));
                                 }
                             } else {
@@ -128,12 +127,12 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                         }
                         case Blocking: {
                             final IO.Blocking<F, R> blockIo =
-                                (IO.Blocking<F, R>) curIo;
+                                    (IO.Blocking<F, R>) curIo;
                             if (isBlockingThread) {
                                 curIo = blockIo.io;
                             } else {
                                 final Either<Cause<F>, R> either =
-                                    runSync(blockIo.io);
+                                        runSync(blockIo.io);
                                 if (either.isLeft()) {
                                     value = either.left();
                                     curIo = IO.fail(either.left());
@@ -150,17 +149,17 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                             break;
                         case Fail: {
                             unwindStack(stack);
-                LOG.finest("IO fail: " + ((IO.Fail<F, R>) curIo).f);
+                            LOG.finest("IO fail: " + ((IO.Fail<F, R>) curIo).f);
                             final Cause<F> cause = ((IO.Fail<F, R>) curIo).f;
                             if (stack.isEmpty()) {
                                 final Cause<F> causeNew =
-                                    (interrupted && !cause.isInterrupt()) ?
-                                        cause.then(Cause.interrupt()) :
-                                        cause;
+                                        (interrupted && !cause.isInterrupt()) ?
+                                                cause.then(Cause.interrupt()) :
+                                                cause;
 
-                LOG.finest("Stack empty: " + causeNew + ". " + this + thread.getName());
-                //Exception e = new RuntimeException("End");
-                //e.printStackTrace();
+                                LOG.finest("Stack empty: " + causeNew + ". " + this + thread.getName());
+                                //Exception e = new RuntimeException("End");
+                                //e.printStackTrace();
                                 done(Left.of(causeNew));
                                 return Left.of(causeNew);
                             }
@@ -170,51 +169,51 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                         }
                         case Fold: {
                             final IO.Fold<F, ?, ?, R> foldIO =
-                                (IO.Fold<F, ?, ?, R>) curIo;
+                                    (IO.Fold<F, ?, ?, R>) curIo;
                             stack.push((Function<?, IO<?, ?>>) curIo);
                             curIo = foldIO.io;
                             break;
                         }
                         case EffectTotal:
                             value = ((IO.EffectTotal<F, R>) curIo)
-                                .supplier.get();
+                                    .supplier.get();
                             curIo = nextInstrApply(value);
                             break;
                         case EffectPartial: {
                             Either<Failure, R> either = ExceptionFailure.tryCatch(() ->
-                                ((IO.EffectPartial<Failure, R>) curIo).supplier.get()
+                                    ((IO.EffectPartial<Failure, R>) curIo).supplier.get()
                             );
                             if (either.isRight()) {
                                 value = either.right();
                                 curIo = nextInstrApply(value);
                             } else if (((ExceptionFailure) either.left()).throwable
-                                instanceof InterruptedException
+                                    instanceof InterruptedException
                             ) {
                                 curIo = IO.fail(Cause.interrupt());
-                            } else  {
+                            } else {
                                 curIo = IO.fail(Cause.fail(either.left()));
                             }
                             break;
                         }
                         case FlatMap:
                             final IO.FlatMap<Object, F, Object, R> flatmapIO =
-                                (IO.FlatMap<Object, F, Object, R>) curIo;
-                            stack.push((v) -> flatmapIO.fn.apply(v));
+                                    (IO.FlatMap<Object, F, Object, R>) curIo;
+                            stack.push(flatmapIO.fn::apply);
                             curIo = flatmapIO.io;
                             break;
                         case Fork: {
                             final IO.Fork<F, R> forkIo =
-                                (IO.Fork<F, R>) curIo;
+                                    (IO.Fork<F, R>) curIo;
                             final IO<F, R> ioValue;
                             if (forkIo.io.tag == IO.Tag.Blocking) {
                                 ioValue = ((IO.Blocking<F, R>) forkIo.io).io;
                             } else {
                                 ioValue = forkIo.io;
                             }
-                            final FiberContext<F, R> fiberContext = new FiberContext<F, R>(
-                                this.executor,
-                                environments.peek(),
-                                platform
+                            final FiberContext<F, R> fiberContext = new FiberContext<>(
+                                    this.executor,
+                                    environments.peek(),
+                                    platform
                             );
                             fiberContext.isBlockingThread = forkIo.io.tag == IO.Tag.Blocking;
                             LOG.finest("Fiber " + number + " create " + fiberContext.number + "  fork " + thread.getName());
@@ -227,7 +226,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                         }
                         case InterruptStatus:
                             final IO.InterruptStatus<F, R> interruptStatusIo =
-                                (IO.InterruptStatus<F, R>) curIo;
+                                    (IO.InterruptStatus<F, R>) curIo;
 
                             interruptStatus.push(interruptStatusIo.flag);
                             stack.push(new InterruptExit());
@@ -235,7 +234,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                             break;
                         case Join:
                             final IO.Join<F, R> joinIo =
-                                (IO.Join<F, R>) curIo;
+                                    (IO.Join<F, R>) curIo;
 
                             final Either<Cause<F>, R> either = joinIo.fiber.join();
                             LOG.finest("Join: " + either + ". " + this + thread.getName());
@@ -266,7 +265,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                         */
                         case Peek:
                             final IO.Peek<F, R> peekIO =
-                                (IO.Peek<F, R>) curIo;
+                                    (IO.Peek<F, R>) curIo;
                             stack.push((R r) -> {
                                 peekIO.consumer.accept(r);
                                 return IO.succeed(r);
@@ -291,21 +290,20 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                         }
                         case Schedule: {
                             final IO.Schedule<F, R> scheduleIO =
-                                (IO.Schedule<F, R>) curIo;
+                                    (IO.Schedule<F, R>) curIo;
                             Scheduler.State state = scheduleIO.scheduler.getState();
                             if (state instanceof Scheduler.Execution) {
                                 curIo = scheduleIO.io.foldCauseM(
-                                    scheduleIO.failure.apply(scheduleIO),
-                                    scheduleIO.success.apply(scheduleIO)
+                                        scheduleIO.failure.apply(scheduleIO),
+                                        scheduleIO.success.apply(scheduleIO)
                                 );
-                            } else if (state instanceof Scheduler.Delay) {
-                                final Scheduler.Delay delay = (Scheduler.Delay) state;
+                            } else if (state instanceof final Scheduler.Delay delay) {
                                 final ScheduledExecutorService executor =
-                                    platform.getScheduler();
+                                        platform.getScheduler();
                                 final FiberContext fiberContext = new FiberContext(
-                                    this.executor,
-                                    environments.peek(),
-                                    platform
+                                        this.executor,
+                                        environments.peek(),
+                                        platform
                                 );
                                 fiberList.add(fiberContext);
                                 LOG.finest("Fiber " + number + " create " + fiberContext.number
@@ -314,22 +312,22 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                                 );
                                 fiberContext.curIo = scheduleIO.io;
                                 fiberContext.scheduledFuture =
-                                    executor.schedule(
-                                        () -> fiberContext.compute(),
-                                        delay.nanoSecond,
-                                        TimeUnit.NANOSECONDS
-                                    );
+                                        executor.schedule(
+                                                () -> fiberContext.compute(),
+                                                delay.nanoSecond,
+                                                TimeUnit.NANOSECONDS
+                                        );
                                 final ScheduledBlocker scheduledBlocker =
-                                    new ScheduledBlocker(
-                                        fiberContext.scheduledFuture
-                                    );
+                                        new ScheduledBlocker(
+                                                fiberContext.scheduledFuture
+                                        );
                                 ForkJoinPool.managedBlock(scheduledBlocker);
-                                synchronized(fiberContext) {
+                                synchronized (fiberContext) {
                                     fiberContext.scheduledFuture = null;
                                 }
                                 fiberList.remove(fiberContext);
                                 final Either<Cause<Failure>, R> result =
-                                    scheduledBlocker.result;
+                                        scheduledBlocker.result;
                                 LOG.finest("Fiber " + number + " scheduler result: " + result);
                                 if (result.isLeft()) {
                                     curIo = IO.fail(Cause.fail(result.left()));
@@ -338,8 +336,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                                     curIo = nextInstrApply(value);
                                 }
                             } else {
-                                if (value instanceof Cause) {
-                                    Cause<?> cause = (Cause<?>) value;
+                                if (value instanceof final Cause<?> cause) {
                                     curIo = IO.fail(cause);
                                 } else {
                                     curIo = nextInstrApply(value);
@@ -355,11 +352,11 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                     curIo = IO.interrupt();
                 }
             }
-        } catch(CancellationException e) {
+        } catch (CancellationException e) {
             LOG.finest("Fiber " + number + " CancellationException. " + thread.getName());
             done(Left.of(Cause.interrupt()));
             return Left.of(Cause.interrupt());
-        } catch(Exception e) {
+        } catch (Exception e) {
             LOG.finest("Fiber " + number + " Exception. "
                     + e.getMessage()
                     + "Thread: " + thread.getName()
@@ -388,19 +385,19 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
             return null;
         } else {
             final Function<Object, IO<?, ?>> fn =
-                (Function<Object, IO<?, ?>>) stack.pop();
+                    (Function<Object, IO<?, ?>>) stack.pop();
             valueLast = value;
             return (IO<F, R>) fn.apply(value);
         }
     }
 
-    @SuppressWarnings({ "unchecked", "rawtypes" })
+    @SuppressWarnings({"unchecked", "rawtypes"})
     private void unwindStack(Deque<Function<?, IO<?, ?>>> stack) {
         boolean unwinding = true;
 
         LOG.finest("Fiber " + number + " unwinding");
 
-        while(unwinding && !stack.isEmpty()) {
+        while (unwinding && !stack.isEmpty()) {
             final Function<?, IO<?, ?>> fn = stack.pop();
             LOG.finest("Unwind: " + fn);
             if (fn instanceof InterruptExit) {
@@ -414,33 +411,30 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
 
     private void done(Either<Cause<F>, R> value) {
         final FiberState<F, R> oldState = state.get();
-        if (oldState instanceof Executing) {
-            final Executing<F, R> executing = (Executing<F, R>) oldState;
-            final Done<F, R> doneValue = new Done<F, R>(value);
+        if (oldState instanceof final Executing<F, R> executing) {
+            final Done<F, R> doneValue = new Done<>(value);
             if (!state.compareAndSet(oldState, doneValue)) {
                 done(value);
             } else {
                 LOG.finer("Fiber " + number + " has done. Value: " +
-                    value +
-                    ". Thread: " + thread.getName());
+                        value +
+                        ". Thread: " + thread.getName());
 
                 executing.notifyObservers(this);
 
                 //if (scheduledFuture != null) {
-                    //if (!scheduledFuture.isDone()) scheduledFuture.cancel(false);
+                //if (!scheduledFuture.isDone()) scheduledFuture.cancel(false);
                 //}
 
                 final List<Fiber<?, ?>> copy = new ArrayList<>(fiberList);
                 final Stream<Fiber<?, ?>> streamFiber = copy.stream();
-                streamFiber.map(fiber -> {
-                    if (!((FiberContext) fiber).isDone()) {
-                        LOG.finest("Fiber " + number + "->" +((FiberContext) fiber).number + " call interrupt. " + thread.getName());
-                        fiber.interrupt();
-                    }
-                    return fiber;
-                })
-                .forEach(fiber -> fiber.join());
-                ;
+                streamFiber.peek(fiber -> {
+                            if (!((FiberContext<?, ?>) fiber).isDone()) {
+                                LOG.finest("Fiber " + number + "->" + ((FiberContext<?, ?>) fiber).number + " call interrupt. " + thread.getName());
+                                fiber.interrupt();
+                            }
+                        })
+                        .forEach(Fiber::join);
             }
         }
     }
@@ -448,8 +442,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     @Override
     public void register(CompletableFuture<Fiber<F, R>> observer) {
         final FiberState<F, R> oldState = state.get();
-        if (oldState instanceof Executing) {
-            Executing<F, R> executing = (Executing<F, R>) oldState;
+        if (oldState instanceof final Executing<F, R> executing) {
             if (!state.compareAndSet(oldState, executing.addObserver(observer))) {
                 register(observer);
             } else {
@@ -471,16 +464,15 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
 
     public Either<Cause<F>, R> getValue() {
         final FiberState<F, R> oldState = state.get();
-        if (oldState instanceof Executing) {
-            final Executing<F, R> executing = (Executing<F, R>) oldState;
+        if (oldState instanceof final Executing<F, R> executing) {
             final Either<Cause<F>, R> value = this.join();
             done(value);
             return value;
             //return ExceptionFailure.tryCatch(
-                //() -> executing.firstObserver().thenApply(Fiber::getCompletedValue).get()
+            //() -> executing.firstObserver().thenApply(Fiber::getCompletedValue).get()
             //).fold(
-                //failure -> Left.of(Cause.die((ExceptionFailure) failure)),
-                //success -> success
+            //failure -> Left.of(Cause.die((ExceptionFailure) failure)),
+            //success -> success
             //);
         } else {
             final Done<F, R> done = (Done<F, R>) oldState;
@@ -493,15 +485,16 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         Suspended
     }
 
-    private static interface FiberState<F, R> { };
+    private interface FiberState<F, R> {
+    }
 
     private static class Executing<F, R> implements FiberState<F, R> {
         final FiberStatus status;
         private final List<CompletableFuture<Fiber<F, R>>> observers;
 
         public Executing(
-            FiberStatus status,
-            List<CompletableFuture<Fiber<F, R>>> observers
+                FiberStatus status,
+                List<CompletableFuture<Fiber<F, R>>> observers
         ) {
             this.status = status;
             this.observers = observers;
@@ -509,7 +502,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
 
         public Executing<F, R> addObserver(CompletableFuture<Fiber<F, R>> observer) {
             this.observers.add(observer);
-            return new Executing<F, R>(this.status, this.observers);
+            return new Executing<>(this.status, this.observers);
         }
 
         public void notifyObservers(Fiber<F, R> value) {
@@ -517,7 +510,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         }
 
         public CompletableFuture<Fiber<F, R>> firstObserver() {
-            return observers.get(0);
+            return observers.getFirst();
         }
     }
 
@@ -534,8 +527,8 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         if (!interruptible()) return false;
 
         //if (scheduledFuture != null) {
-            //scheduledFuture.cancel(mayInterruptIfRunning);
-            //scheduledFuture = null;
+        //scheduledFuture.cancel(mayInterruptIfRunning);
+        //scheduledFuture = null;
         //}
 
         return super.cancel(mayInterruptIfRunning);
@@ -550,14 +543,14 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     @Override
     public IO<F, Void> interrupt() {
         //if (!interruptible()) {
-            //LOG.finest("Fiber " + number + " cannot interruptable");
-            //return IO.interrupt();
+        //LOG.finest("Fiber " + number + " cannot interruptable");
+        //return IO.interrupt();
         //}
 
         LOG.finest("Fiber " + number + " has interrupted. ");
         interrupted = true;
 
-        synchronized(this) {
+        synchronized (this) {
             if (scheduledFuture != null && interruptible()) {
                 scheduledFuture.cancel(false);
             }
@@ -566,7 +559,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         final List<Fiber<?, ?>> copy = new ArrayList<>(fiberList);
         final Stream<Fiber<?, ?>> streamFiber = copy.stream();
         streamFiber.forEach(fiber -> {
-            LOG.finest("Fiber " + number + "->" +((FiberContext) fiber).number + " call interrupt. " + thread.getName());
+            LOG.finest("Fiber " + number + "->" + ((FiberContext<?, ?>) fiber).number + " call interrupt. " + thread.getName());
             fiber.interrupt();
             //return fiber;
         })
@@ -585,28 +578,28 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         return IO.interrupt();
     }
 
-    public <C> IO<F, R> joinFiber() {
+    public IO<F, R> joinFiber() {
         Either<Cause<F>, R> value2 = getValue();
         return value2
-            .fold(
-                failure -> IO.fail(failure),
-                success -> IO.succeed(success)
-            );
+                .fold(
+                        IO::fail,
+                        IO::succeed
+                );
     }
 
     @SuppressWarnings("unchecked")
     @Override
     public <R2> Future<RaceResult<F, R, R2>> raceWith(Fiber<F, R2> that) {
-        LOG.finer("RW This: " + number + " That: " + ((FiberContext) that).number);
+        LOG.finer("RW This: " + number + " That: " + ((FiberContext<?, ?>) that).number);
         CompletableFuture<Fiber<F, Object>> winner = new CompletableFuture<>();
         ((Fiber<F, Object>) this).register(winner);
         ((Fiber<F, Object>) that).register(winner);
         return winner.thenApply(winnerFiber -> {
-            LOG.finer("RW Winner: " + ((FiberContext) winnerFiber).number);
+            LOG.finer("RW Winner: " + ((FiberContext<?, ?>) winnerFiber).number);
             if (winnerFiber == this) {
                 Either<Cause<F>, R> value = getCompletedValue();
                 if (value.isRight()) {
-                    LOG.finer("Interrupt: " + ((FiberContext) that).number);
+                    LOG.finer("Interrupt: " + ((FiberContext<?, ?>) that).number);
                     that.interrupt();
                 }
             } else {
@@ -638,9 +631,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     private class InterruptExit<C> implements Function<R, IO<F, R>> {
         @Override
         public IO<F, R> apply(R v) {
-            boolean isInterruptible = interruptStatus.isEmpty() ?
-                true :
-                interruptStatus.peek();
+            boolean isInterruptible = interruptStatus.isEmpty() || interruptStatus.peek();
 
             if (isInterruptible) {
                 popDrop(null);
@@ -673,12 +664,11 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     }
 
     public Either<Cause<F>, R> runSync(final IO<F, R> io)
-         throws InterruptedException
-    {
-        final FiberContext<F, R> fiberContext = new FiberContext<F, R>(
-            executor,
-            environments.peek(),
-            platform
+            throws InterruptedException {
+        final FiberContext<F, R> fiberContext = new FiberContext<>(
+                executor,
+                environments.peek(),
+                platform
         );
         fiberContext.isBlockingThread = true;
         fiberContext.curIo = io;
@@ -692,8 +682,7 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     }
 
     private static class ScheduledBlocker<R>
-         implements ForkJoinPool.ManagedBlocker
-    {
+            implements ForkJoinPool.ManagedBlocker {
         private final ScheduledFuture<Either<Cause<Failure>, R>> scheduledFuture;
         private Either<Cause<Failure>, R> result = Left.of(Cause.interrupt());
         private boolean done = false;
@@ -709,11 +698,10 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
 
         @Override
         public boolean block() {
-            result = ExceptionFailure.tryCatch(() ->
-                scheduledFuture.get()
+            result = ExceptionFailure.tryCatch(scheduledFuture::get
             ).fold(
-                failure -> Left.of(Cause.fail(failure)),
-                success -> success
+                    failure -> Left.of(Cause.fail(failure)),
+                    success -> success
             );
             done = true;
             return true;

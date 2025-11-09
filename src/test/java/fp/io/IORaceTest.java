@@ -9,7 +9,7 @@ import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class IOTest2 {
+public class IORaceTest {
     final static DefaultPlatform platform = new DefaultPlatform();
 
     final Runtime defaultRuntime = new DefaultRuntime(null, platform);
@@ -22,78 +22,78 @@ public class IOTest2 {
     @Test
     public void testRace() {
         IO<Failure, Integer> io = slow(100, 2).race(
-            slow(1, 5)
+                slow(1, 5)
         );
         Assert.assertEquals(
-            Right.of(5),
-            defaultRuntime.unsafeRun(io)
+                Right.of(5),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
     public void testRaceWinnerFail() {
         IO<Failure, Integer> io = slow(50, 2).race(
-            slow(1, 5).<Failure, Integer>flatMap(n ->
-                IO.fail(Cause.fail(GeneralFailure.of(n)))
-            )
+                slow(1, 5).flatMap(n ->
+                        IO.fail(Cause.fail(GeneralFailure.of(n)))
+                )
         );
         Assert.assertEquals(
-            Right.of(2),
-            defaultRuntime.unsafeRun(io)
+                Right.of(2),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
     public void testRaceFails() {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
-            IO.fail(Cause.fail(n))
-        ).race(
-            slow(1, 5).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
-            )
+        ).race(
+                slow(1, 5).flatMap(n ->
+                        IO.fail(Cause.fail(n))
+                )
         );
         Assert.assertEquals(
-            Left.of(Cause.fail(5).then(Cause.fail(2))),
-            defaultRuntime.unsafeRun(io)
+                Left.of(Cause.fail(5).then(Cause.fail(2))),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
     public void testRaceAttempt() {
         IO<Failure, Integer> io = slow(100, 2).raceAttempt(
-            slow(1, 5)
+                slow(1, 5)
         );
         Assert.assertEquals(
-            Right.of(5),
-            defaultRuntime.unsafeRun(io)
+                Right.of(5),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
     public void testRaceAttemptWinnerFail() {
         IO<Failure, Integer> io = slow(50, 2).raceAttempt(
-            slow(1, 5).<Failure, Integer>flatMap(n ->
-                IO.fail(Cause.fail(GeneralFailure.of(n)))
-            )
+                slow(1, 5).flatMap(n ->
+                        IO.fail(Cause.fail(GeneralFailure.of(n)))
+                )
         );
         Assert.assertEquals(
-            Left.of(Cause.fail(GeneralFailure.of(5))),
-            defaultRuntime.unsafeRun(io)
+                Left.of(Cause.fail(GeneralFailure.of(5))),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
     public void testRaceAttemptFails() {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
-            IO.fail(Cause.fail(n))
-        ).raceAttempt(
-            slow(1, 5).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
-            )
+        ).raceAttempt(
+                slow(1, 5).flatMap(n ->
+                        IO.fail(Cause.fail(n))
+                )
         );
         Assert.assertEquals(
-            Left.of(Cause.fail(5)),
-            defaultRuntime.unsafeRun(io)
+                Left.of(Cause.fail(5)),
+                defaultRuntime.unsafeRun(io)
         );
     }
 

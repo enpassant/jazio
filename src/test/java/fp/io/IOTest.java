@@ -167,9 +167,10 @@ public class IOTest {
                                         ))));
         Either<Cause<Object>, String> result = defaultRuntime.unsafeRun(io);
         final String resultStr = result.orElse("");
-        Assert.assertTrue(
+        Assert.assertEquals(
                 "One of the thread's name is not good: " + result,
-                resultStr.indexOf("blocking") == resultStr.lastIndexOf("blocking")
+                resultStr.indexOf("blocking"),
+                resultStr.lastIndexOf("blocking")
         );
     }
 
@@ -269,7 +270,7 @@ public class IOTest {
         final Resource res = new Resource();
         final IO<Void, Integer> io = IO.bracket(
                 IO.succeed(res),
-                resource -> IO.effectTotal(() -> resource.close()),
+                resource -> IO.effectTotal(resource::close),
                 resource -> IO.effectTotal(() -> resource.use(2))
         );
         Assert.assertEquals(Right.of(2), defaultRuntime.unsafeRun(io));
@@ -285,7 +286,7 @@ public class IOTest {
         final IO<Failure, Integer> io = IO.bracket(
                 IO.succeed(res),
                 resource -> IO.fail(Cause.die(notClosable)),
-                resource -> IO.<Failure, Integer>effect(() -> 8 / 2)
+                resource -> IO.effect(() -> 8 / 2)
                         .flatMap(i -> IO.fail(Cause.die(divideByZero)))
         );
 
@@ -305,11 +306,11 @@ public class IOTest {
         final Resource res2 = new Resource();
         final IO<Void, Integer> io = IO.bracket(
                 IO.effectTotal(() -> res1),
-                resource -> IO.effectTotal(() -> resource.close()),
+                resource -> IO.effectTotal(resource::close),
                 resource -> IO.effectTotal(() -> resource.use(3)).flatMap(n ->
                         IO.bracket(
                                 IO.effectTotal(() -> res2),
-                                resource2 -> IO.effectTotal(() -> resource2.close()),
+                                resource2 -> IO.effectTotal(resource2::close),
                                 resource2 -> IO.effectTotal(() -> n + resource2.use(4))
                         )
                 )
@@ -325,11 +326,11 @@ public class IOTest {
         final Resource res2 = new Resource();
         final IO<String, Integer> io = IO.bracket(
                 IO.effectTotal(() -> res1),
-                resource -> IO.effectTotal(() -> resource.close()),
+                resource -> IO.effectTotal(resource::close),
                 resource -> IO.effectTotal(() -> resource.use(5)).flatMap(n ->
                         IO.bracket(
                                 IO.effectTotal(() -> res2),
-                                resource2 -> IO.effectTotal(() -> resource2.close()),
+                                resource2 -> IO.effectTotal(resource2::close),
                                 resource2 -> IO.effectTotal(() -> n + resource2.use(6)).flatMap(i ->
                                         IO.fail(Cause.fail("Failure")))
                         )
@@ -403,10 +404,10 @@ public class IOTest {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(7))
-                .peek(r2 -> r2.close());
+                .peek(Resource::close);
         Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(7, res.usage);
-        Assert.assertEquals(false, res.acquired);
+        Assert.assertFalse(res.acquired);
     }
 
     @Test
@@ -414,10 +415,10 @@ public class IOTest {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(7))
-                .peekM(r2 -> IO.effectTotal(() -> r2.close()));
+                .peekM(r2 -> IO.effectTotal(r2::close));
         Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(7, res.usage);
-        Assert.assertEquals(false, res.acquired);
+        Assert.assertFalse(res.acquired);
     }
 
     @Test
@@ -429,7 +430,7 @@ public class IOTest {
                 );
         Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(7, res.usage);
-        Assert.assertEquals(true, res.acquired);
+        Assert.assertTrue(res.acquired);
         res.close();
     }
 
@@ -494,7 +495,7 @@ public class IOTest {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(1)).repeat(5)
-                .peek(r2 -> r2.close());
+                .peek(Resource::close);
         Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(5, res.usage);
     }
@@ -507,7 +508,7 @@ public class IOTest {
                     r1.use(1);
                     return IO.<Object, Resource>fail(Cause.fail(5));
                 }).repeat(5);
-        var io = ioInit.peek(r2 -> r2.close());
+        var io = ioInit.peek(Resource::close);
         Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(1, res.usage);
     }
@@ -517,7 +518,7 @@ public class IOTest {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(1)).retry(5)
-                .peek(r2 -> r2.close());
+                .peek(Resource::close);
         Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(1, res.usage);
     }
@@ -530,7 +531,7 @@ public class IOTest {
                     r1.use(1);
                     return IO.<Object, Resource>fail(Cause.fail(5));
                 }).retry(5);
-        var io = ioInit.peek(r2 -> r2.close());
+        var io = ioInit.peek(Resource::close);
         Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(5, res.usage);
     }
@@ -547,7 +548,7 @@ public class IOTest {
                         return IO.<Object, Resource>fail(Cause.fail(5));
                     }
                 }).retry(5);
-        var io = ioInit.peek(r2 -> r2.close());
+        var io = ioInit.peek(Resource::close);
         Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
         Assert.assertEquals(4, res.usage);
     }
@@ -589,9 +590,7 @@ public class IOTest {
     public void testSequenceBig() {
         final int count = 100_000;
         final Stream<IO<Object, Integer>> streamIO =
-                IntStream.range(0, count).mapToObj(i ->
-                        IO.succeed(i)
-                );
+                IntStream.range(0, count).mapToObj(IO::succeed);
 
         IO<Object, Integer> io = IO.sequence(streamIO)
                 .map(stream -> stream.mapToInt(i -> i * 2).sum());
@@ -634,9 +633,7 @@ public class IOTest {
     public void testSequenceParBig() {
         final int count = 100_000;
         final Stream<IO<Object, Integer>> streamIO =
-                IntStream.range(0, count).mapToObj(i ->
-                        IO.succeed(i)
-                );
+                IntStream.range(0, count).mapToObj(IO::succeed);
 
         IO<Object, Integer> io = IO.sequencePar(streamIO)
                 .map(stream -> stream.mapToInt(i -> i * 2).sum());
@@ -730,7 +727,7 @@ public class IOTest {
     @Test
     public void testRaceWinnerFail() {
         IO<Failure, Integer> io = slow(50, 2).race(
-                slow(1, 5).<Failure, Integer>flatMap(n ->
+                slow(1, 5).flatMap(n ->
                         IO.fail(Cause.fail(GeneralFailure.of(n)))
                 )
         );
@@ -745,7 +742,7 @@ public class IOTest {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
         ).race(
-                slow(1, 5).<Integer, Integer>flatMap(n ->
+                slow(1, 5).flatMap(n ->
                         IO.fail(Cause.fail(n))
                 )
         );
@@ -769,7 +766,7 @@ public class IOTest {
     @Test
     public void testRaceAttemptWinnerFail() {
         IO<Failure, Integer> io = slow(50, 2).raceAttempt(
-                slow(1, 5).<Failure, Integer>flatMap(n ->
+                slow(1, 5).flatMap(n ->
                         IO.fail(Cause.fail(GeneralFailure.of(n)))
                 )
         );
@@ -784,7 +781,7 @@ public class IOTest {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
         ).raceAttempt(
-                slow(1, 5).<Integer, Integer>flatMap(n ->
+                slow(1, 5).flatMap(n ->
                         IO.fail(Cause.fail(n))
                 )
         );
@@ -818,8 +815,7 @@ public class IOTest {
                 defaultRuntime.unsafeRun(io);
 
         result.forEachLeft(failure -> {
-            if (failure.getFailure() instanceof ExceptionFailure) {
-                ExceptionFailure exceptionFailure = (ExceptionFailure) failure.getFailure();
+            if (failure.getFailure() instanceof final ExceptionFailure exceptionFailure) {
                 exceptionFailure.throwable.printStackTrace(System.err);
             }
         });
@@ -858,8 +854,7 @@ public class IOTest {
 
         try {
             future.get();
-        } catch (CancellationException e) {
-        } catch (InterruptedException e) {
+        } catch (CancellationException | InterruptedException ignored) {
         } catch (ExecutionException e) {
             e.printStackTrace();
         }

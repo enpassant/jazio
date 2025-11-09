@@ -1,7 +1,7 @@
 package fp.util;
 
-import java.util.stream.Collectors;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class HItem<T, R extends HList> implements HList {
     private final T value1;
@@ -9,9 +9,9 @@ public class HItem<T, R extends HList> implements HList {
     private final int size;
 
     private HItem(
-        final T value1,
-        final R value2,
-        final int size
+            final T value1,
+            final R value2,
+            final int size
     ) {
         this.value1 = value1;
         this.value2 = value2;
@@ -19,29 +19,29 @@ public class HItem<T, R extends HList> implements HList {
     }
 
     public static <T> HItem<T, HNil> of(final T value) {
-        return new HItem<T, HNil>(value, new HNil(), 1);
+        return new HItem<>(value, new HNil(), 1);
     }
 
     public static <T, R extends HList> HItem<T, R> of(
-        final T value1,
-        final R value2
+            final T value1,
+            final R value2
     ) {
-        return new HItem<T, R>(value1, value2, value2.size() + 1);
+        return new HItem<>(value1, value2, value2.size() + 1);
     }
 
     @Override
     public <S> HItem<S, HItem<T, R>> add(final S value) {
-        return new HItem<S, HItem<T, R>>(value, this, size + 1);
+        return new HItem<>(value, this, size + 1);
     }
 
     @Override
     public HList addAll(final HList hlist) {
         return hlist.valueStream()
-            .reduce(
-                (HList) this,
-                (hl, i) -> hl.add(i),
-                (h1, h2) -> h1.addAll(h2)
-            );
+                .reduce(
+                        this,
+                        HList::add,
+                        HList::addAll
+                );
     }
 
     @Override
@@ -86,11 +86,9 @@ public class HItem<T, R extends HList> implements HList {
             return true;
         }
 
-        if (!(obj instanceof HItem)) {
+        if (!(obj instanceof final HItem<?, ?> other)) {
             return false;
         }
-
-        final HItem<?, ?> other = (HItem<?, ?>) obj;
 
         return other.head().equals(value1) && other.tail().equals(value2);
     }
@@ -98,8 +96,8 @@ public class HItem<T, R extends HList> implements HList {
     @Override
     public String toString() {
         final String values = valueStream()
-            .map(Object::toString)
-            .collect(Collectors.joining(", "));
+                .map(Object::toString)
+                .collect(Collectors.joining(", "));
         return "HList(" + values + ")";
     }
 }

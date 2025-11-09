@@ -2,14 +2,13 @@ package fp.util;
 
 import java.util.Optional;
 import java.util.stream.Stream;
-import java.util.stream.Stream.Builder;
 
 public interface HQueue {
-    public static <T> HQueue of(final T value) {
-        return HQueueNotEmpty.<T>of(value);
+    static <T> HQueue of(final T value) {
+        return HQueueNotEmpty.of(value);
     }
 
-    public static HQueueNil empty() {
+    static HQueueNil empty() {
         return new HQueueNil();
     }
 
@@ -29,6 +28,6 @@ public interface HQueue {
 
     default Stream<Object> valueStream() {
         return Stream.iterate(this, hq -> !hq.isEmpty(), HQueue::tail)
-            .map(HQueue::head);
+                .map(HQueue::head);
     }
 }

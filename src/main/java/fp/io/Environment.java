@@ -21,7 +21,7 @@ public class Environment {
     }
 
     public <T> T get(Class<T> key) {
-        final Optional<T> valueOpt = (Optional<T>) map.getValue(key.getName());
+        final Optional<T> valueOpt = map.getValue(key.getName());
         if (valueOpt.isEmpty()) {
             throw new IllegalArgumentException("Missing environment: " + key);
         } else {
@@ -39,7 +39,7 @@ public class Environment {
                 .reduce(
                         io,
                         ((frio, entry) ->
-                                frio.provide(entry.getFirst(), Object.class, entry.getSecond())
+                                frio.provide(entry.first(), Object.class, entry.second())
                         ),
                         ((frio, frio2) -> frio)
                 );

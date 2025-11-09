@@ -2,14 +2,13 @@ package fp.util;
 
 import java.util.Optional;
 import java.util.stream.Stream;
-import java.util.stream.Stream.Builder;
 
 public interface HList {
-    public static <T> HItem<T, HNil> of(T value) {
+    static <T> HItem<T, HNil> of(T value) {
         return HItem.of(value);
     }
 
-    public static HNil empty() {
+    static HNil empty() {
         return new HNil();
     }
 
@@ -31,7 +30,7 @@ public interface HList {
 
     default <T> Stream<T> valueStream() {
         return Stream.iterate(this, HList::tail)
-            .limit(size())
-            .map(HList::head);
+                .limit(size())
+                .map(HList::head);
     }
 }

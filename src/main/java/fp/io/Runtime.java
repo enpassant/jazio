@@ -1,21 +1,19 @@
 package fp.io;
 
-import java.util.concurrent.Future;
-
 import fp.util.Either;
 import fp.util.ExceptionFailure;
 import fp.util.Failure;
 import fp.util.Left;
+import java.util.concurrent.Future;
 
 public interface Runtime {
-    @SuppressWarnings("unchecked")
     default <F, R> Either<Cause<F>, R> unsafeRun(IO<F, R> io) {
         final Either<Failure, Either<Cause<F>, R>> eitherValue =
-            ExceptionFailure.tryCatch(() -> unsafeRunAsync(io).get());
+                ExceptionFailure.tryCatch(() -> unsafeRunAsync(io).get());
 
-        Either<Cause<F>, R> result = (Either<Cause<F>, R>) eitherValue.fold(
-            failure -> Left.of(Cause.die(failure)),
-            success -> success
+        Either<Cause<F>, R> result = eitherValue.fold(
+                failure -> Left.of(Cause.die(failure)),
+                success -> success
         );
 
 //        result.forEachLeft(cause -> {
@@ -30,10 +28,9 @@ public interface Runtime {
         return result;
     }
 
-    @SuppressWarnings("unchecked")
     default <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<F, R> io) {
         FiberContext<F, R> fiberContext = createFiberContext();
-        return fiberContext.runAsync((IO<F, R>) io);
+        return fiberContext.runAsync(io);
     }
 
     <F, R> FiberContext<F, R> createFiberContext();

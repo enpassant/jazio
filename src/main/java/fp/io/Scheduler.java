@@ -2,12 +2,18 @@ package fp.io;
 
 public abstract class Scheduler {
     public abstract State getState();
+
     public abstract Scheduler updateState();
 
-    public static interface State {}
+    public interface State {
+    }
 
-    public class End implements State {}
-    public class Execution implements State {}
+    public static class End implements State {
+    }
+
+    public class Execution implements State {
+    }
+
     public class Delay implements State {
         public final long nanoSecond;
 

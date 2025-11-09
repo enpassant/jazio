@@ -1,15 +1,13 @@
 package fp.io;
 
+import fp.util.Right;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.Test;
 
-import fp.util.Failure;
-import fp.util.Right;
-
 /**
-        Based on: https://wwconfirmedw.codejava.net/java-core/concurrency/understanding-java-fork-join-framework-with-examples
-*/
+ * Based on: <a href="https://wwconfirmedw.codejava.net/java-core/concurrency/understanding-java-fork-join-framework-with-examples">...</a>
+ */
 public class ArrayTest {
     final static DefaultPlatform platform = new DefaultPlatform();
     final Runtime runtime = new DefaultRuntime(null, platform);
@@ -29,38 +27,38 @@ public class ArrayTest {
         final int threshold = 100_000;
 
         final IO<Void, Integer> io =
-            compute(array, 0, SIZE, threshold);
+                compute(array, 0, SIZE, threshold);
 
         Assert.assertEquals(
-            Right.of(SIZE / 2),
-            runtime.unsafeRun(io)
+                Right.of(SIZE / 2),
+                runtime.unsafeRun(io)
         );
     }
 
     private static IO<Void, Integer> compute(
-        final int[] array,
-        final int start,
-        final int end,
-        final int threshold
+            final int[] array,
+            final int start,
+            final int end,
+            final int threshold
     ) {
         if (end - start <= threshold) {
             return IO.effectTotal(() ->
-                computeDirectly(array, start, end)
+                    computeDirectly(array, start, end)
             );
         } else {
             final int middle = (end + start) / 2;
 
             return compute(array, start, middle, threshold).zipParWith(
-                compute(array, middle, end, threshold),
-                (a, b) -> a + b
+                    compute(array, middle, end, threshold),
+                    Integer::sum
             );
         }
     }
 
     private static Integer computeDirectly(
-        final int[] array,
-        final int start,
-        final int end
+            final int[] array,
+            final int start,
+            final int end
     ) {
         Integer count = 0;
 

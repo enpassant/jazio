@@ -8,11 +8,15 @@ public class Log {
     private Log() {
     }
 
-    public static interface Service {
+    public interface Service {
         IO<Object, Void> error(String message, Object... params);
+
         IO<Object, Void> debug(String message, Object... params);
+
         IO<Object, Void> info(String message, Object... params);
+
         IO<Object, Void> trace(String message, Object... params);
+
         IO<Object, Void> warning(String message, Object... params);
     }
 
@@ -24,34 +28,39 @@ public class Log {
         }
 
         private IO<Object, Void> log(
-            Level level,
-            String message,
-            Object... params
+                Level level,
+                String message,
+                Object... params
         ) {
             if (logger.isLoggable(level)) {
                 return IO.effectTotal(
-                    () -> logger.log(level, message, params)
+                        () -> logger.log(level, message, params)
                 ).blocking();
             } else {
                 return IO.unit();
             }
         }
+
         @Override
         public IO<Object, Void> error(String message, Object... params) {
             return log(Level.SEVERE, message, params);
         }
+
         @Override
         public IO<Object, Void> debug(String message, Object... params) {
             return log(Level.FINEST, message, params);
         }
+
         @Override
         public IO<Object, Void> info(String message, Object... params) {
             return log(Level.INFO, message, params);
         }
+
         @Override
         public IO<Object, Void> trace(String message, Object... params) {
             return log(Level.INFO, message, params);
         }
+
         @Override
         public IO<Object, Void> warning(String message, Object... params) {
             return log(Level.WARNING, message, params);

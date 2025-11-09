@@ -1,12 +1,12 @@
 package fp.util;
 
-import java.util.stream.Collectors;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 public class HMap {
     private final HList hlist;
 
-    private <K, V> HMap(HList hlist) {
+    private HMap(HList hlist) {
         this.hlist = hlist;
     }
 
@@ -30,18 +30,18 @@ public class HMap {
 
     public <K, V> Optional<V> getValue(K key) {
         return hlist.valueStream()
-            .map(Tuple2.class::cast)
-            .filter(tuple -> tuple._1().equals(key))
-            .map(tuple -> (V) tuple._2())
-            .findAny();
+                .map(Tuple2.class::cast)
+                .filter(tuple -> tuple._1().equals(key))
+                .map(tuple -> (V) tuple._2())
+                .findAny();
     }
 
     public <K> HList getValues(K key) {
         return hlist.valueStream()
-            .map(Tuple2.class::cast)
-            .filter(tuple -> tuple._1().equals(key))
-            .map(tuple -> tuple._2())
-            .reduce((HList) new HNil(), HList::add, (h1, h2) -> h1.addAll(h2));
+                .map(Tuple2.class::cast)
+                .filter(tuple -> tuple._1().equals(key))
+                .map(Tuple2::_2)
+                .reduce(new HNil(), HList::add, HList::addAll);
     }
 
     public HList allValues() {
@@ -54,11 +54,9 @@ public class HMap {
             return true;
         }
 
-        if (!(obj instanceof HMap)) {
+        if (!(obj instanceof final HMap other)) {
             return false;
         }
-
-        final HMap other = (HMap) obj;
 
         return other.hlist.equals(hlist);
     }
@@ -66,9 +64,9 @@ public class HMap {
     @Override
     public String toString() {
         final String values = hlist.valueStream()
-            .map(Tuple2.class::cast)
-            .map(tuple -> tuple._1() + " -> " + tuple._2())
-            .collect(Collectors.joining(", "));
+                .map(Tuple2.class::cast)
+                .map(tuple -> tuple._1() + " -> " + tuple._2())
+                .collect(Collectors.joining(", "));
         return "HMap(" + values + ")";
     }
 }

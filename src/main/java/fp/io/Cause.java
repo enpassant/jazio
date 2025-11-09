@@ -1,9 +1,5 @@
 package fp.io;
 
-import java.util.Objects;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-
 import fp.util.Either;
 import fp.util.ExceptionFailure;
 import fp.util.Failure;
@@ -11,6 +7,9 @@ import fp.util.GeneralFailure;
 import fp.util.Left;
 import fp.util.Right;
 import fp.util.Tuple2;
+import java.util.Objects;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 
 public abstract class Cause<F> {
     protected final Failure failure;
@@ -51,16 +50,15 @@ public abstract class Cause<F> {
     }
 
     public static <F> Cause<F> both(Cause<F> first, Cause<F> second) {
-        return new Both<F>(first, second);
+        return new Both<>(first, second);
     }
 
     public static <F> Cause<F> die(Failure failure) {
-        if (failure instanceof ExceptionFailure) {
-            final ExceptionFailure exceptionFailure = (ExceptionFailure) failure;
+        if (failure instanceof final ExceptionFailure exceptionFailure) {
             final Throwable throwable =
-                (exceptionFailure.throwable instanceof ExecutionException) ?
-                    exceptionFailure.throwable.getCause() :
-                    exceptionFailure.throwable;
+                    (exceptionFailure.throwable instanceof ExecutionException) ?
+                            exceptionFailure.throwable.getCause() :
+                            exceptionFailure.throwable;
 
             if (throwable instanceof CancellationException) {
                 return interrupt();
@@ -68,19 +66,19 @@ public abstract class Cause<F> {
                 return interrupt();
             }
         }
-        return new Die<F>(failure);
+        return new Die<>(failure);
     }
 
     public static <F> Cause<F> die(Throwable throwable) {
-        return new Die<F>(ExceptionFailure.of(throwable));
+        return new Die<>(ExceptionFailure.of(throwable));
     }
 
     public static <F> Cause<F> fail(F failureValue) {
-        return new Fail<F>(failureValue);
+        return new Fail<>(failureValue);
     }
 
     public static <F> Cause<F> interrupt() {
-        return new Interrupt<F>();
+        return new Interrupt<>();
     }
 
     public boolean isDie() {
@@ -96,7 +94,7 @@ public abstract class Cause<F> {
     }
 
     public Cause<F> then(Cause<F> second) {
-        return new Then<F>(this, second);
+        return new Then<>(this, second);
     }
 
     @Override
@@ -110,7 +108,7 @@ public abstract class Cause<F> {
             @SuppressWarnings("unchecked")
             Cause<F> cause = (Cause<F>) other;
             return Objects.equals(failure, cause.failure)
-                && Objects.equals(kind, cause.kind);
+                    && Objects.equals(kind, cause.kind);
         } else {
             return false;
         }
@@ -121,14 +119,14 @@ public abstract class Cause<F> {
         return failure.hashCode() * 11 + kind.hashCode();
     }
 
-    public static <F, R> Either<Failure, R> resultFlatten(
-        Either<Cause<Failure>, R> result
+    public static <R> Either<Failure, R> resultFlatten(
+            Either<Cause<Failure>, R> result
     ) {
         return result.fold(
-            cause -> cause.isFail() ?
-                    Left.of(cause.getValue()) :
-                    Left.of(cause.getFailure()),
-            success -> Right.of(success)
+                cause -> cause.isFail() ?
+                        Left.of(cause.getValue()) :
+                        Left.of(cause.getFailure()),
+                Right::of
         );
     }
 
@@ -163,7 +161,7 @@ public abstract class Cause<F> {
         }
     }
 
-    static class Both <F> extends Cause<F> {
+    static class Both<F> extends Cause<F> {
         private final Cause<F> first;
         private final Cause<F> second;
 
@@ -180,7 +178,7 @@ public abstract class Cause<F> {
         }
     }
 
-    static class Then <F> extends Cause<F> {
+    static class Then<F> extends Cause<F> {
         private final Cause<F> first;
         private final Cause<F> second;
 

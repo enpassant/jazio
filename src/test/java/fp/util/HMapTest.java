@@ -1,9 +1,6 @@
 package fp.util;
 
-import java.util.function.Function;
 import java.util.Optional;
-import java.util.stream.IntStream;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -12,35 +9,35 @@ public class HMapTest {
     @Test
     public void testToString() {
         final HMap hmap = HMap.of("int", 13)
-            .add("str", "String")
-            .add("double", 3.45)
-            .add("optional", Optional.empty())
-            .add("long", 15L);
+                .add("str", "String")
+                .add("double", 3.45)
+                .add("optional", Optional.empty())
+                .add("long", 15L);
 
         Assert.assertEquals(
-            hmap.toString(),
-            "HMap(long -> 15, optional -> Optional.empty, double -> 3.45, str -> String, int -> 13)"
+                "HMap(long -> 15, optional -> Optional.empty, double -> 3.45, str -> String, int -> 13)",
+                hmap.toString()
         );
     }
 
     @Test
     public void testSize() {
         final HMap hmap = HMap.of("int", 13)
-            .add("str", "String")
-            .add("double", 3.45)
-            .add("optional", Optional.empty())
-            .add("long", 15L);
+                .add("str", "String")
+                .add("double", 3.45)
+                .add("optional", Optional.empty())
+                .add("long", 15L);
 
-        Assert.assertEquals(hmap.size(), 5);
+        Assert.assertEquals(5, hmap.size());
     }
 
     @Test
     public void testGetValue() {
         final HMap hmap = HMap.of("int", 13)
-            .add("str", "String")
-            .add("double", 3.45)
-            .add("optional", Optional.empty())
-            .add("long", 15L);
+                .add("str", "String")
+                .add("double", 3.45)
+                .add("optional", Optional.empty())
+                .add("long", 15L);
 
         final Optional<Double> value = hmap.getValue("double");
 
@@ -50,10 +47,10 @@ public class HMapTest {
     @Test
     public void testGetValueMissing() {
         final HMap hmap = HMap.of("int", 13)
-            .add("str", "String")
-            .add("double", 3.45)
-            .add("optional", Optional.empty())
-            .add("long", 15L);
+                .add("str", "String")
+                .add("double", 3.45)
+                .add("optional", Optional.empty())
+                .add("long", 15L);
 
         final Optional<Double> value = hmap.getValue("key");
 
@@ -63,10 +60,10 @@ public class HMapTest {
     @Test
     public void testGetValues() {
         final HMap hmap = HMap.of("number", 13)
-            .add("str", "String")
-            .add("number", 3.45)
-            .add("optional", Optional.empty())
-            .add("number", 15L);
+                .add("str", "String")
+                .add("number", 3.45)
+                .add("optional", Optional.empty())
+                .add("number", 15L);
 
         final HList hlist = hmap.getValues("number");
 
@@ -76,13 +73,13 @@ public class HMapTest {
     @Test
     public void testGetValuesMissing() {
         final HMap hmap = HMap.of("number", 13)
-            .add("str", "String")
-            .add("number", 3.45)
-            .add("optional", Optional.empty())
-            .add("number", 15L);
+                .add("str", "String")
+                .add("number", 3.45)
+                .add("optional", Optional.empty())
+                .add("number", 15L);
 
         final HList hlist = hmap.getValues("key");
 
-        Assert.assertEquals(hlist, new HNil());
+        Assert.assertEquals(new HNil(), hlist);
     }
 }

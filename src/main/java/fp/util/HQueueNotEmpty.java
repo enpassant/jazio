@@ -8,8 +8,8 @@ public class HQueueNotEmpty implements HQueue {
     private final HList backward;
 
     private HQueueNotEmpty(
-        final HList forward,
-        final HList backward
+            final HList forward,
+            final HList backward
     ) {
         this.forward = forward;
         this.backward = backward;
@@ -22,19 +22,19 @@ public class HQueueNotEmpty implements HQueue {
     @Override
     public <S> HQueueNotEmpty add(final S value) {
         return new HQueueNotEmpty(
-            forward,
-            backward.add(value)
+                forward,
+                backward.add(value)
         );
     }
 
     @Override
     public <T> T head() {
-        return (T) forward.head();
+        return forward.head();
     }
 
     @Override
     public <T> Optional<T> headOptional() {
-        return Optional.of((T) forward.head());
+        return Optional.of(forward.head());
     }
 
     @Override
@@ -45,8 +45,8 @@ public class HQueueNotEmpty implements HQueue {
                 return HQueue.empty();
             } else {
                 return new HQueueNotEmpty(
-                    backward.reverse(),
-                    new HNil()
+                        backward.reverse(),
+                        new HNil()
                 );
             }
         } else {
@@ -81,11 +81,9 @@ public class HQueueNotEmpty implements HQueue {
             return true;
         }
 
-        if (!(obj instanceof HQueueNotEmpty)) {
+        if (!(obj instanceof final HQueueNotEmpty other)) {
             return false;
         }
-
-        final HQueueNotEmpty other = (HQueueNotEmpty) obj;
 
         return other.head().equals(this.head()) && other.tail().equals(tail());
     }
@@ -93,8 +91,8 @@ public class HQueueNotEmpty implements HQueue {
     @Override
     public String toString() {
         final String values = valueStream()
-            .map(Object::toString)
-            .collect(Collectors.joining(", "));
+                .map(Object::toString)
+                .collect(Collectors.joining(", "));
         return "HQueueNotEmpty(" + values + ")";
     }
 }

@@ -1,7 +1,6 @@
 package fp.util;
 
 import java.util.Optional;
-
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -21,40 +20,40 @@ public class HQueueTest {
     @Test
     public void testFloatItem() {
         HQueue hlist = HQueue.of(13)
-            .add("String")
-            .add(3.45f)
-            .add(Optional.empty())
-            .add(15L);
+                .add("String")
+                .add(3.45f)
+                .add(Optional.empty())
+                .add(15L);
         float result = hlist.tail().tail().head();
-        Assert.assertEquals(result, 3.45f, 0.0001);
+        Assert.assertEquals(3.45f, result, 0.0001);
     }
 
     @Test
     public void testSize() {
         HQueue hlist = HQueue.of(13)
-            .add("String")
-            .add(3.45f)
-            .add(Optional.empty())
-            .add(15L);
-        Assert.assertEquals(hlist.size(), 5);
-        Assert.assertEquals(hlist.tail().tail().size(), 3);
-        Assert.assertEquals(hlist.tail().tail().tail().tail().size(), 1);
-        Assert.assertEquals(hlist.tail().tail().tail().tail().tail().size(), 0);
+                .add("String")
+                .add(3.45f)
+                .add(Optional.empty())
+                .add(15L);
+        Assert.assertEquals(5, hlist.size());
+        Assert.assertEquals(3, hlist.tail().tail().size());
+        Assert.assertEquals(1, hlist.tail().tail().tail().tail().size());
+        Assert.assertEquals(0, hlist.tail().tail().tail().tail().tail().size());
     }
 
     @Test
     public void testGet() {
         HQueue hlist = HQueue.of(13)
-            .add("String")
-            .add(3.45f)
-            .add(Optional.empty())
-            .add(15L);
-        Assert.assertEquals(hlist.get(-1), Optional.empty());
-        Assert.assertEquals(hlist.get(0).get(), 13);
-        Assert.assertEquals(hlist.get(1).get(), "String");
-        Assert.assertEquals(hlist.get(2).get(), 3.45f);
-        Assert.assertEquals(hlist.get(3).get(), Optional.empty());
-        Assert.assertEquals(hlist.get(4).get(), 15L);
-        Assert.assertEquals(hlist.get(5), Optional.empty());
+                .add("String")
+                .add(3.45f)
+                .add(Optional.empty())
+                .add(15L);
+        Assert.assertEquals(Optional.empty(), hlist.get(-1));
+        Assert.assertEquals(13, hlist.get(0).get());
+        Assert.assertEquals("String", hlist.get(1).get());
+        Assert.assertEquals(3.45f, hlist.get(2).get());
+        Assert.assertEquals(Optional.empty(), hlist.get(3).get());
+        Assert.assertEquals(15L, hlist.get(4).get());
+        Assert.assertEquals(Optional.empty(), hlist.get(5));
     }
 }

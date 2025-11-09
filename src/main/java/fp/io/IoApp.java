@@ -1,10 +1,9 @@
 package fp.io;
 
-import java.util.logging.Logger;
-
 import fp.io.console.Console;
 import fp.io.log.Log;
 import fp.util.Either;
+import java.util.logging.Logger;
 
 public abstract class IoApp<F, R> {
     private static IoApp ioApp;
@@ -24,13 +23,11 @@ public abstract class IoApp<F, R> {
 
     public Either<Cause<F>, R> runApp() {
         try {
-            final Either<Cause<F>, R> result =
-                getRuntime().unsafeRun(
+            return getRuntime().unsafeRun(
                     getEnvironment().provides(
-                        program()
+                            program()
                     )
-                );
-            return result;
+            );
         } finally {
             getPlatform().shutdown();
         }
@@ -39,7 +36,7 @@ public abstract class IoApp<F, R> {
     protected Environment newEnvironment() {
         final Logger logger = Logger.getLogger(IoApp.class.getName());
         return Environment.of(Console.Service.class, new Console.Live())
-            .and(Log.Service.class, new Log.Live(logger));
+                .and(Log.Service.class, new Log.Live(logger));
     }
 
     protected Platform newPlatform() {

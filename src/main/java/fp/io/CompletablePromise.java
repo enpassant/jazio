@@ -16,17 +16,17 @@ public class CompletablePromise<V> extends CompletableFuture<V> {
     }
 
     public static <V> CompletablePromise<V> of(
-        final Platform platform,
-        final Future<V> future
+            final Platform platform,
+            final Future<V> future
     ) {
         CompletablePromise<V> completablePromise =
-            new CompletablePromise<>(platform, future);
+                new CompletablePromise<>(platform, future);
 
         if (!future.isDone()) {
             platform.getScheduler().schedule(
-                completablePromise::tryToComplete,
-                100000,
-                TimeUnit.NANOSECONDS
+                    completablePromise::tryToComplete,
+                    100000,
+                    TimeUnit.NANOSECONDS
             );
         }
 
@@ -37,9 +37,7 @@ public class CompletablePromise<V> extends CompletableFuture<V> {
         if (future.isDone()) {
             try {
                 complete(future.get());
-            } catch (InterruptedException e) {
-                completeExceptionally(e);
-            } catch (CancellationException e) {
+            } catch (InterruptedException | CancellationException e) {
                 completeExceptionally(e);
             } catch (ExecutionException e) {
                 completeExceptionally(e.getCause());
@@ -53,9 +51,9 @@ public class CompletablePromise<V> extends CompletableFuture<V> {
         }
 
         platform.getScheduler().schedule(
-            this::tryToComplete,
-            100000,
-            TimeUnit.NANOSECONDS
+                this::tryToComplete,
+                100000,
+                TimeUnit.NANOSECONDS
         );
     }
 }

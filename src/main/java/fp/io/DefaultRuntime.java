@@ -17,24 +17,23 @@ public class DefaultRuntime implements Runtime {
     }
 
     public <F, R> FiberContext<F, R> createFiberContext() {
-        FiberContext<F, R> fiberContext = new FiberContext<F, R>(
+        return new FiberContext<F, R>(
             platform.getForkJoin(),
             context,
             platform
         );
-        return fiberContext;
     }
 
     public <F, R> Future<Either<Cause<F>, R>> unsafeRunAsync(IO<F, R> io) {
         final FiberContext<F, R> fiberContext = createFiberContext();
-        return fiberContext.runAsync((IO<F, R>) io);
+        return fiberContext.runAsync(io);
     }
 
     public <F, R> Either<Cause<F>, R> unsafeRun(IO<F, R> io) {
         return ExceptionFailure.tryCatch(() ->
-            ((ForkJoinTask<Either<Cause<F>, R>>) unsafeRunAsync(io)).get()
+            unsafeRunAsync(io).get()
         ).fold(
-            failure -> Left.of(Cause.die((ExceptionFailure) failure)),
+            failure -> Left.of(Cause.die(failure)),
             success -> success
         );
     }
