@@ -6,37 +6,35 @@ description := "Java IO effect library, inspired by the fantastic ZIO library"
 
 lazy val publishSettings = Seq(
   publishMavenStyle := true,
-  publishTo := {
-    val nexus = "https://s01.oss.sonatype.org/"
-    if (isSnapshot.value)
-      Some("snapshots" at nexus + "content/repositories/snapshots")
-    else
-      Some("releases"  at nexus + "service/local/staging/deploy/maven2")
+  ThisBuild / publishTo := {
+    val centralSnapshots = "https://central.sonatype.com/repository/maven-snapshots/"
+    if (isSnapshot.value) Some("central-snapshots" at centralSnapshots)
+    else localStaging.value
   },
   publishConfiguration := publishConfiguration.value.withOverwrite(true),
   Test / publishArtifact := false,
   pomIncludeRepository := { _ => false },
   pomExtra := (
     <url>https://github.com/enpassant/jazio</url>
-    <licenses>
-      <license>
-        <name>Apache-style</name>
-        <url>https://opensource.org/licenses/Apache-2.0</url>
-        <distribution>repo</distribution>
-      </license>
-    </licenses>
-    <scm>
-      <url>git@github.com:enpassant/jazio.git</url>
-      <connection>scm:git:git@github.com:enpassant/jazio.git</connection>
-    </scm>
-    <developers>
-      <developer>
-        <id>enpassant</id>
-        <name>Enpassant</name>
-        <email>enpassant.prog@gmail.com</email>
-        <url>https://github.com/enpassant</url>
-      </developer>
-    </developers>)
+      <licenses>
+        <license>
+          <name>Apache-style</name>
+          <url>https://opensource.org/licenses/Apache-2.0</url>
+          <distribution>repo</distribution>
+        </license>
+      </licenses>
+      <scm>
+        <url>git@github.com:enpassant/jazio.git</url>
+        <connection>scm:git:git@github.com:enpassant/jazio.git</connection>
+      </scm>
+      <developers>
+        <developer>
+          <id>enpassant</id>
+          <name>Enpassant</name>
+          <email>enpassant.prog@gmail.com</email>
+          <url>https://github.com/enpassant</url>
+        </developer>
+      </developers>)
 )
 
 lazy val root = (project in file("."))
