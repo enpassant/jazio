@@ -10,7 +10,7 @@ import fp.util.Tuple2;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.stream.IntStream;
+import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import org.junit.AfterClass;
 import org.junit.Assert;
@@ -359,7 +359,7 @@ public class IOTest {
 
     @Test
     public void testMutuallyTailRecursive() {
-        IO<Void, Boolean> io = even(100000);
+        IO<Void, Boolean> io = even(100_000);
         Assert.assertEquals(Right.of(true), defaultRuntime.unsafeRun(io));
     }
 
@@ -588,15 +588,31 @@ public class IOTest {
 
     @Test
     public void testSequenceBig() {
-        final int count = 100_000;
-        final Stream<IO<Object, Integer>> streamIO =
-                IntStream.range(0, count).mapToObj(IO::succeed);
+        final long count = 100_000;
+        final Stream<IO<Object, Long>> streamIO =
+                LongStream.range(0, count).mapToObj(IO::succeed);
 
-        IO<Object, Integer> io = IO.sequence(streamIO)
-                .map(stream -> stream.mapToInt(i -> i * 2).sum());
+        IO<Object, Long> io = IO.sequence(streamIO)
+                .map(stream -> stream.mapToLong(i -> i * 2).sum());
         Assert.assertEquals(
                 Right.of((count - 1) * count),
                 defaultRuntime.unsafeRun(io)
+        );
+    }
+
+    @Test
+    public void testStreamBig() {
+        final long count = 1_000_000;
+        final Stream<Long> stream =
+                LongStream.range(0, count).boxed();
+
+        final long sum = stream
+                .mapToLong(Long::longValue)
+                .map(i -> i * 2)
+                .sum();
+        Assert.assertEquals(
+                Long.valueOf((count - 1) * count).longValue(),
+                Long.valueOf(sum).longValue()
         );
     }
 
@@ -631,12 +647,12 @@ public class IOTest {
 
     @Test
     public void testSequenceParBig() {
-        final int count = 100_000;
-        final Stream<IO<Object, Integer>> streamIO =
-                IntStream.range(0, count).mapToObj(IO::succeed);
+        final long count = 100_000;
+        final Stream<IO<Object, Long>> streamIO =
+                LongStream.range(0, count).mapToObj(IO::succeed);
 
-        IO<Object, Integer> io = IO.sequencePar(streamIO)
-                .map(stream -> stream.mapToInt(i -> i * 2).sum());
+        IO<Object, Long> io = IO.sequencePar(streamIO)
+                .map(stream -> stream.mapToLong(i -> i * 2).sum());
         Assert.assertEquals(
                 Right.of((count - 1) * count),
                 defaultRuntime.unsafeRun(io)

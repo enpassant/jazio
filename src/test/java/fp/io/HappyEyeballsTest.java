@@ -34,15 +34,16 @@ public class HappyEyeballsTest {
 
     private final static Logger LOG = Logger.getLogger(HappyEyeballsTest.class.getName());
 
-    private final static long second = 10000000L;
+    private final static long millisecond = 10000000L;
+    private final static long DELAY = 10 * millisecond;
 
     private static final List<IO<Failure, String>> tasks =
             Stream.of(
-                            printSleepPrint(10 * second, "task1"),
-                            printSleepFail(second, "task2"),
-                            printSleepPrint(3 * second, "task3"),
-                            printSleepPrint(2 * second, "task4"),
-                            printSleepPrint(2 * second, "task5")
+                            printSleepPrint(100 * millisecond, "task1"),
+                            printSleepFail(5 * millisecond, "task2"),
+                            printSleepPrint(40 * millisecond, "task3"),
+                            printSleepPrint(20 * millisecond, "task4"),
+                            printSleepPrint(20 * millisecond, "task5")
                     )
                     .collect(Collectors.toList());
 
@@ -155,17 +156,17 @@ public class HappyEyeballsTest {
     @Test
     public void testHappyEyeballs1() {
         log("Start testHappyEyeballs1");
-        IO<Failure, String> io = run(tasks, 2 * second);
+        IO<Failure, String> io = run(tasks, DELAY);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of("task3"), result);
+        Assert.assertEquals(Right.of("task4"), result);
     }
 
     @Test
     public void testHappyEyeballs2() {
         log("Start testHappyEyeballs2");
-        IO<Failure, String> io = run2(tasks, 2 * second);
+        IO<Failure, String> io = run2(tasks, DELAY);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of("task3"), result);
+        Assert.assertEquals(Right.of("task4"), result);
     }
 
     @Test
