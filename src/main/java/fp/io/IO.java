@@ -79,6 +79,10 @@ public abstract class IO<F, R> {
         return new Blocking<>(this);
     }
 
+    public static <F, R> IO<F, R> call(Supplier<IO<F, R>> supplier) {
+        return new Call<>(supplier);
+    }
+
     public static <F, R> IO<F, R> succeed(R r) {
         return new Succeed<>(r);
     }
@@ -521,6 +525,7 @@ public abstract class IO<F, R> {
     enum Tag {
         Access,
         Blocking,
+        Call,
         Pure,
         Fail,
         Fold,
@@ -604,6 +609,20 @@ public abstract class IO<F, R> {
         ) {
             tag = Tag.Blocking;
             this.io = io;
+        }
+    }
+
+    static class Call<F, R> extends IO<F, R> {
+        final Supplier<IO<F, R>> fn;
+
+        public Call(Supplier<IO<F, R>> fn) {
+            tag = Tag.Call;
+            this.fn = fn;
+        }
+
+        @Override
+        public String toString() {
+            return "Call(" + fn + ")";
         }
     }
 

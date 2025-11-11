@@ -83,11 +83,6 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
         );
     }
 
-    public Future<Either<Cause<F>, R>> runAsync(IO<F, R> io) {
-        curIo = io;
-        return ((ForkJoinPool) executor).submit(this);
-    }
-
     @SuppressWarnings("unchecked")
     @Override
     public Either<Cause<F>, R> compute() {
@@ -174,6 +169,10 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                             curIo = foldIO.io;
                             break;
                         }
+                        case Call:
+                            final IO.Call<Object, Object> callIo = (IO.Call<Object, Object>) curIo;
+                            curIo = callIo.fn.get();
+                            break;
                         case EffectTotal:
                             value = ((IO.EffectTotal<F, R>) curIo)
                                     .supplier.get();
@@ -655,12 +654,17 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
     public boolean block() {
         this.thread = Thread.currentThread();
         final String name = thread.getName();
-        thread.setName(name + ". blocking");
+        thread.setName(name + ".blocking");
         isBlockingThread = true;
         result = compute();
         thread.setName(name);
         done = true;
         return true;
+    }
+
+    public Future<Either<Cause<F>, R>> runAsync(IO<F, R> io) {
+        curIo = io;
+        return ((ForkJoinPool) executor).submit(this);
     }
 
     public Either<Cause<F>, R> runSync(final IO<F, R> io)

@@ -10,6 +10,7 @@ import fp.util.Tuple2;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.logging.Logger;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
 import org.junit.AfterClass;
@@ -17,6 +18,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class IOTest {
+
+    private final Logger LOG = Logger.getLogger(FiberContext.class.getName());
+
     final static DefaultPlatform platform = new DefaultPlatform();
 
     final Runtime defaultRuntime = new DefaultRuntime(null, platform);
@@ -41,13 +45,20 @@ public class IOTest {
     @Test
     public void testBlocking() {
         IO<Object, String> io = IO.effectTotal(
-                () -> Thread.currentThread().getName()
+                () -> {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {
+                    }
+                    return Thread.currentThread().getName();
+                }
         ).blocking();
+        final String threadName = defaultRuntime.unsafeRun(io)
+                .orElse("");
+        LOG.fine(() -> threadName);
         Assert.assertTrue(
                 "It is not a blocking thread's name",
-                defaultRuntime.unsafeRun(io)
-                        .orElse("")
-                        .contains("blocking")
+                threadName.contains("blocking")
         );
     }
 
@@ -342,25 +353,22 @@ public class IOTest {
     }
 
     private IO<Void, Boolean> odd(int n) {
-        return IO.effectTotal(() -> n == 0).flatMap(isZero ->
-                isZero ?
-                        IO.succeed(false) :
-                        even(n - 1)
-        );
+        return (n == 0) ?
+                IO.succeed(false) :
+                IO.call(() -> even(n - 1));
     }
 
     private IO<Void, Boolean> even(int n) {
-        return IO.effectTotal(() -> n == 0).flatMap(isZero ->
-                isZero ?
-                        IO.succeed(true) :
-                        odd(n - 1)
-        );
+        return (n == 0) ?
+                IO.succeed(true) :
+                IO.call(() -> odd(n - 1));
     }
 
     @Test
     public void testMutuallyTailRecursive() {
-        IO<Void, Boolean> io = even(100_000);
-        Assert.assertEquals(Right.of(true), defaultRuntime.unsafeRun(io));
+        IO<Void, Boolean> io = even(1_000_000);
+        final Either<Cause<Void>, Boolean> result = defaultRuntime.unsafeRun(io);
+        Assert.assertEquals(Right.of(true), result);
     }
 
     //@Test
