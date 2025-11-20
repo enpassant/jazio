@@ -40,8 +40,8 @@ public class HappyEyeballsTest {
     private static final List<IO<Failure, String>> tasks =
             Stream.of(
                             printSleepPrint(100 * millisecond, "task1"),
-                            printSleepFail(5 * millisecond, "task2"),
-                            printSleepPrint(40 * millisecond, "task3"),
+                            printSleepPrint(40 * millisecond, "task2"),
+                            printSleepFail(5 * millisecond, "task3"),
                             printSleepPrint(20 * millisecond, "task4"),
                             printSleepPrint(20 * millisecond, "task5")
                     )
@@ -158,7 +158,7 @@ public class HappyEyeballsTest {
         log("Start testHappyEyeballs1");
         IO<Failure, String> io = run(tasks, DELAY);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of("task4"), result);
+        Assert.assertEquals(Right.of("task2"), result);
     }
 
     @Test

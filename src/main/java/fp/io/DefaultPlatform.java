@@ -9,6 +9,9 @@ import java.util.concurrent.ThreadFactory;
 public class DefaultPlatform implements Platform {
     private static int platformCount = 0;
 
+    private final ExecutorService virtual = Executors.newThreadPerTaskExecutor(
+            Thread.ofVirtual().name("io-virtual-", 0).factory()
+    );
     private final ExecutorService blocking = Executors.newCachedThreadPool(
             new PlatformThreadFactory("io-blocking")
     );
@@ -30,10 +33,16 @@ public class DefaultPlatform implements Platform {
 
     @Override
     public void shutdown() {
+        virtual.shutdown();
         blocking.shutdown();
         executor.shutdown();
         forkJoin.shutdown();
         scheduler.shutdown();
+    }
+
+    @Override
+    public ExecutorService getVirtual() {
+        return virtual;
     }
 
     @Override

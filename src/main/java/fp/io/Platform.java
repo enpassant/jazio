@@ -5,9 +5,14 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 
 public interface Platform {
+    ExecutorService getVirtual();
+
     ExecutorService getBlocking();
+
     ExecutorService getExecutor();
+
     ExecutorService getForkJoin();
+
     ScheduledExecutorService getScheduler();
 
     default <V> CompletablePromise<V> toCompletablePromise(Future<V> future) {

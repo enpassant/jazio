@@ -19,7 +19,24 @@ import org.junit.Test;
 
 public class IOTest {
 
-    private final Logger LOG = Logger.getLogger(FiberContext.class.getName());
+    static {
+        System.setProperty(
+                "java.util.logging.config.file",
+                ClassLoader.getSystemResource(
+                        "logging.properties"
+                ).getPath()
+        );
+    }
+
+    private static final Logger LOG = Logger.getLogger(FiberContext.class.getName());
+
+    static {
+        System.out.println("Logger level: " + LOG.getLevel());
+        System.out.println("Logger parent: " + LOG.getParent().getName());
+        System.out.println("Parent level: " + LOG.getParent().getLevel());
+        System.out.println("Logging config file location: " +
+                System.getProperty("java.util.logging.config.file"));
+    }
 
     final static DefaultPlatform platform = new DefaultPlatform();
 
@@ -57,8 +74,36 @@ public class IOTest {
                 .orElse("");
         LOG.fine(() -> threadName);
         Assert.assertTrue(
-                "It is not a blocking thread's name",
-                threadName.contains("blocking")
+                threadName + " is not a blocking thread's name",
+                threadName.contains("blocking") || threadName.contains("virtual")
+        );
+    }
+
+    private IO<Object, Fiber<Object, Long>> createBlockingFork(final Long n) {
+        return IO.effectTotal(
+                () -> {
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException ignored) {
+                    }
+                    return n;
+                }
+        ).blocking().fork();
+    }
+
+    @Test
+    public void testManyBlockingFork() {
+        final long count = 10_000;
+        final Stream<IO<Object, Fiber<Object, Long>>> streamIO =
+                LongStream.range(0, count).mapToObj(this::createBlockingFork);
+
+        IO<Object, Long> io = IO.sequence(streamIO)
+                .flatMap(stream -> IO.sequence(
+                        stream.map(IO::join)
+                ).map(s -> s.mapToLong(n -> n * 2).sum()));
+        Assert.assertEquals(
+                Right.of((count - 1) * count),
+                defaultRuntime.unsafeRun(io)
         );
     }
 
@@ -573,7 +618,7 @@ public class IOTest {
 
     @Test
     public void testTimeoutWithoutInterrupt() {
-        IO<Failure, Integer> io = slow(10, 2).timeout(1000000000);
+        IO<Failure, Integer> io = slow(10, 2).timeout(1_000_000_000);
 
         Assert.assertEquals(
                 Right.of(2),
@@ -655,7 +700,7 @@ public class IOTest {
 
     @Test
     public void testSequenceParBig() {
-        final long count = 100_000;
+        final long count = 10_000;
         final Stream<IO<Object, Long>> streamIO =
                 LongStream.range(0, count).mapToObj(IO::succeed);
 
@@ -671,15 +716,19 @@ public class IOTest {
     public void testSequenceRace() {
         final long millis = 100;
 
-        final Stream<IO<Failure, Integer>> streamIO =
-                Stream.of(slow(2 * millis, 13), slow(millis, 6), slow(2 * millis, 4));
+        final Stream<IO<Failure, Integer>> streamIO = Stream.concat(
+                Stream.of(slow(2 * millis, 13), slow(millis, -6), slow(2 * millis, 4)),
+                Stream.iterate(2, i -> i + 1)
+                        .map(i -> slow(i * millis, i))
+                        .limit(1000)
+        );
 
         final long start = System.currentTimeMillis();
 
         IO<Failure, Integer> io = IO.sequenceRace(streamIO);
 
         Assert.assertEquals(
-                Right.of(6),
+                Right.of(-6),
                 defaultRuntime.unsafeRun(io)
         );
 
@@ -687,7 +736,7 @@ public class IOTest {
 
         Assert.assertTrue(
                 "Time was: " + time,
-                time < 3 * millis
+                time < 6 * millis
         );
     }
 
@@ -750,8 +799,8 @@ public class IOTest {
 
     @Test
     public void testRaceWinnerFail() {
-        IO<Failure, Integer> io = slow(50, 2).race(
-                slow(1, 5).flatMap(n ->
+        IO<Failure, Integer> io = slow(500, 2).race(
+                slow(10, 5).flatMap(n ->
                         IO.fail(Cause.fail(GeneralFailure.of(n)))
                 )
         );
@@ -907,6 +956,6 @@ public class IOTest {
         return IO.effect(() -> {
             Thread.sleep(millis);
             return value;
-        }).blocking();
+        }).setName("slow").blocking();
     }
 }

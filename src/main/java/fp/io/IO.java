@@ -18,13 +18,23 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import java.util.stream.Stream.Builder;
 
-public abstract class IO<F, R> {
-    Tag tag;
-    Optional<String> nameOptional = Optional.empty();
+public class IO<F, R> {
+    protected Tag tag;
+    protected Optional<String> nameOptional = Optional.empty();
 
     public IO<F, R> setName(String name) {
         nameOptional = Optional.ofNullable(name);
         return this;
+    }
+
+    public String name() {
+        return nameOptional
+                .map(name -> name + "[" + tag.name() + "]")
+                .orElse(tag.name());
+    }
+
+    public String display() {
+        return name();
     }
 
     public Optional<String> getNameOptional() {
@@ -268,42 +278,41 @@ public abstract class IO<F, R> {
     public IO<F, R> race(
             IO<F, R> that
     ) {
-        return this.fork().flatMap(fiber ->
-                that.fork().flatMap(fiberThat ->
-                        IO.effect(() ->
-                                        fiber.raceWith(fiberThat).get()
-                                ).mapFailure(Cause::die)
-                                .flatMap(raceResult ->
-                                        raceResult.<R>getWinner().getCompletedValue().fold(
-                                                failure -> raceResult.<R>getLooser().getValue().fold(
-                                                        f -> IO.fail(failure.then(f)),
-                                                        IO::succeed
-                                                ),
-                                                success -> {
-                                                    raceResult.getLooser().interrupt();
-                                                    return IO.succeed(success);
-                                                }
-                                        ))
-                )
-        );
+        return new Race<>(this, that,
+                result -> IO.effect(() -> result)
+                        .mapFailure(Cause::die)
+                        .flatMap(raceResult ->
+                                raceResult.<R>getWinner().getCompletedValue().fold(
+                                        failure -> {
+                                            final Fiber<F, R> looser = raceResult.getLooser();
+                                            return looser.getValue().fold(
+                                                    f -> IO.fail(failure.then(f)),
+                                                    IO::succeed
+                                            );
+                                        },
+                                        success -> {
+                                            final Fiber<F, R> looser = raceResult.getLooser();
+                                            looser.interrupt();
+                                            return IO.succeed(success);
+                                        }
+                                )));
     }
 
     public IO<F, R> raceAttempt(
             IO<F, R> that
     ) {
-        return fork().flatMap(fiber ->
-                that.fork().flatMap(fiberThat ->
-                        IO.effect(() ->
-                                        fiber.raceWith(fiberThat).get()
-                                ).mapFailure(Cause::die)
-                                .peek(raceResult -> raceResult.getLooser().interrupt())
-                                .flatMap(raceResult ->
-                                        raceResult.<R>getWinner().getCompletedValue().fold(
-                                                IO::fail,
-                                                IO::succeed
-                                        )
+        return new Race<>(
+                this,
+                that,
+                result -> IO.effect(() -> result)
+                        .mapFailure(Cause::die)
+                        .peek(raceResult -> raceResult.getLooser().interrupt())
+                        .flatMap(raceResult ->
+                                raceResult.<R>getWinner().getCompletedValue().fold(
+                                        IO::fail,
+                                        IO::succeed
                                 )
-                )
+                        )
         ).flatMap(r -> (r == null) ? IO.interrupt() : IO.succeed(r));
     }
 
@@ -538,6 +547,7 @@ public abstract class IO<F, R> {
         Join,
         Lock,
         Peek,
+        Race,
         Provide,
         Schedule
     }
@@ -570,6 +580,10 @@ public abstract class IO<F, R> {
         public Succeed(R r) {
             tag = Tag.Pure;
             this.r = r;
+        }
+
+        public String display() {
+            return String.format("%s(%s)", tag.name(), r);
         }
     }
 
@@ -610,6 +624,10 @@ public abstract class IO<F, R> {
             tag = Tag.Blocking;
             this.io = io;
         }
+
+        public String display() {
+            return String.format("%s(%s)", name(), io.display());
+        }
     }
 
     static class Call<F, R> extends IO<F, R> {
@@ -648,6 +666,10 @@ public abstract class IO<F, R> {
         public IO<F2, R> apply(A a) {
             return success.apply(a);
         }
+
+        public String display() {
+            return String.format("%s(%s, failure, success)", tag.name(), io.display());
+        }
     }
 
     static class Fork<F, R>
@@ -665,6 +687,10 @@ public abstract class IO<F, R> {
         public String toString() {
             return "Fork(" + io + ")";
         }
+
+        public String display() {
+            return String.format("%s(%s)", name(), io.display());
+        }
     }
 
     static class FlatMap<F, F2, R, R2> extends IO<F2, R2> {
@@ -680,6 +706,10 @@ public abstract class IO<F, R> {
         @Override
         public String toString() {
             return "FlatMap(" + io + ", " + fn + ")";
+        }
+
+        public String display() {
+            return String.format("%s(%s, fn)", name(), io.display());
         }
     }
 
@@ -733,6 +763,27 @@ public abstract class IO<F, R> {
             tag = Tag.Peek;
             this.io = io;
             this.consumer = consumer;
+        }
+    }
+
+    static class Race<F, R> extends IO<F, R> {
+        final IO<F, R> io1;
+        final IO<F, R> io2;
+        final Function<RaceResult<F, R>, IO<F, R>> fn;
+
+        public Race(
+                final IO<F, R> io1,
+                final IO<F, R> io2,
+                final Function<RaceResult<F, R>, IO<F, R>> fn
+        ) {
+            tag = Tag.Race;
+            this.io1 = io1;
+            this.io2 = io2;
+            this.fn = fn;
+        }
+
+        public String display() {
+            return String.format("%s(%s, %s)", name(), io1.display(), io2.display());
         }
     }
 
