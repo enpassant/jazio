@@ -2,21 +2,21 @@ package fp.util;
 
 import java.util.LinkedHashMap;
 import java.util.Map;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class Tuple2Test {
+class Tuple2Test {
 
     @Test
-    public void testCreation() {
+    void testCreation() {
         Tuple2<String, Double> tuple = Tuple2.of("2", 2.0);
 
-        Assert.assertEquals("2", tuple.first());
-        Assert.assertEquals((Object) 2.0, tuple.second());
+        Assertions.assertEquals("2", tuple.first());
+        Assertions.assertEquals((Object) 2.0, tuple.second());
     }
 
     @Test
-    public void testEqualMaps() {
+    void testEqualMaps() {
         Map<String, Object> mapExpected = new LinkedHashMap<>();
         mapExpected.put("1", 1);
         mapExpected.put("2", 2.0);
@@ -31,6 +31,6 @@ public class Tuple2Test {
                 Tuple2.of("4", 4.0),
                 Tuple2.of("5", 5)
         );
-        Assert.assertEquals(mapExpected, map);
+        Assertions.assertEquals(mapExpected, map);
     }
 }

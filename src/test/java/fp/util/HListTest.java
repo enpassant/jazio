@@ -2,18 +2,18 @@ package fp.util;
 
 import java.util.Optional;
 import java.util.stream.IntStream;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HListTest {
 
     @Test
-    public void testHNilEquals() {
-        Assert.assertEquals(new HNil(), HList.empty());
+    void testHNilEquals() {
+        Assertions.assertEquals(new HNil(), HList.empty());
     }
 
     @Test
-    public void testEquals() {
+    void testEquals() {
         final HList hlist = HList.of(13)
                 .add("String")
                 .add(3.45)
@@ -21,11 +21,11 @@ public class HListTest {
                 .add(15L);
         final HItem<Long, HItem<Optional<Object>, HItem<Double, HItem<String, HItem<Integer, HNil>>>>> hlist2 =
                 HList.of(13).add("String").add(3.45).add(Optional.empty()).add(15L);
-        Assert.assertEquals(hlist, hlist2);
+        Assertions.assertEquals(hlist, hlist2);
     }
 
     @Test
-    public void testNotEquals() {
+    void testNotEquals() {
         final HList hlist = HList.of(13)
                 .add("String")
                 .add(3.45)
@@ -33,28 +33,28 @@ public class HListTest {
                 .add(15L);
         final HItem<Long, HItem<Optional<Object>, HItem<Float, HItem<String, HItem<Integer, HNil>>>>> hlist2 =
                 HList.of(13).add("String").add(3.45f).add(Optional.empty()).add(15L);
-        Assert.assertNotEquals(hlist, hlist2);
+        Assertions.assertNotEquals(hlist, hlist2);
     }
 
     @Test
-    public void testFloatItem() {
+    void testFloatItem() {
         final HItem<Long, HItem<Optional<Object>, HItem<Float, HItem<String, HItem<Integer, HNil>>>>> hlist =
                 HList.of(13).add("String").add(3.45f).add(Optional.empty()).add(15L);
-        Assert.assertEquals((Float) 3.45f, hlist.tail().tail().head());
+        Assertions.assertEquals((Float) 3.45f, hlist.tail().tail().head());
     }
 
     @Test
-    public void testAddAll() {
+    void testAddAll() {
         final HList hlist1 = HList.of(13).add("String").add(3.45);
         final HList hlist2 = HList.of(15L).add(Optional.empty());
 
         final HList hlist =
                 HList.of(13).add("String").add(3.45).add(Optional.empty()).add(15L);
-        Assert.assertEquals(hlist, hlist1.addAll(hlist2));
+        Assertions.assertEquals(hlist, hlist1.addAll(hlist2));
     }
 
     @Test
-    public void testBigList() {
+    void testBigList() {
         final HList hlist = IntStream.range(0, 100_000)
                 .boxed()
                 .reduce(
@@ -63,6 +63,6 @@ public class HListTest {
                         HList::addAll
                 );
         final Integer head = hlist.reverse().head();
-        Assert.assertEquals((Integer) 0, head);
+        Assertions.assertEquals((Integer) 0, head);
     }
 }

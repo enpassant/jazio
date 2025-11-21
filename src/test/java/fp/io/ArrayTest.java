@@ -1,9 +1,9 @@
 package fp.io;
 
 import fp.util.Right;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 /**
  * Based on: <a href="https://wwconfirmedw.codejava.net/java-core/concurrency/understanding-java-fork-join-framework-with-examples">...</a>
@@ -12,7 +12,7 @@ public class ArrayTest {
     final static DefaultPlatform platform = new DefaultPlatform();
     final Runtime runtime = new DefaultRuntime(null, platform);
 
-    @AfterClass
+    @AfterAll
     public static void setUp() {
         platform.shutdown();
     }
@@ -21,7 +21,7 @@ public class ArrayTest {
     }
 
     @Test
-    public void testCounter() {
+    void testCounter() {
         final int SIZE = 10_000_000;
         final int[] array = incrementArray(SIZE);
         final int threshold = 100_000;
@@ -29,7 +29,7 @@ public class ArrayTest {
         final IO<Void, Integer> io =
                 compute(array, 0, SIZE, threshold);
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(SIZE / 2),
                 runtime.unsafeRun(io)
         );

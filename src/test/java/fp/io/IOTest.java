@@ -13,11 +13,11 @@ import java.util.concurrent.Future;
 import java.util.logging.Logger;
 import java.util.stream.LongStream;
 import java.util.stream.Stream;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
-public class IOTest {
+class IOTest {
 
     static {
         System.setProperty(
@@ -42,25 +42,25 @@ public class IOTest {
 
     final Runtime defaultRuntime = new DefaultRuntime(null, platform);
 
-    @AfterClass
-    public static void setUp() {
+    @AfterAll
+    static void setUp() {
         platform.shutdown();
     }
 
     @Test
-    public void testAbsolveSuccess() {
+    void testAbsolveSuccess() {
         IO<Void, Integer> io = IO.absolve(IO.succeed(Right.of(4)));
-        Assert.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testAbsolveFailure() {
+    void testAbsolveFailure() {
         IO<Integer, Integer> io = IO.absolve(IO.succeed(Left.of(4)));
-        Assert.assertEquals(Left.of(Cause.fail(4)), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Left.of(Cause.fail(4)), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testBlocking() {
+    void testBlocking() {
         IO<Object, String> io = IO.effectTotal(
                 () -> {
                     try {
@@ -73,9 +73,9 @@ public class IOTest {
         final String threadName = defaultRuntime.unsafeRun(io)
                 .orElse("");
         LOG.fine(() -> threadName);
-        Assert.assertTrue(
-                threadName + " is not a blocking thread's name",
-                threadName.contains("blocking") || threadName.contains("virtual")
+        Assertions.assertTrue(
+                threadName.contains("blocking") || threadName.contains("virtual"),
+                threadName + " is not a blocking thread's name"
         );
     }
 
@@ -92,7 +92,7 @@ public class IOTest {
     }
 
     @Test
-    public void testManyBlockingFork() {
+    void testManyBlockingFork() {
         final long count = 10_000;
         final Stream<IO<Object, Fiber<Object, Long>>> streamIO =
                 LongStream.range(0, count).mapToObj(this::createBlockingFork);
@@ -101,92 +101,92 @@ public class IOTest {
                 .flatMap(stream -> IO.sequence(
                         stream.map(IO::join)
                 ).map(s -> s.mapToLong(n -> n * 2).sum()));
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of((count - 1) * count),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testPureIO() {
+    void testPureIO() {
         IO<Void, Integer> io = IO.succeed(4);
-        Assert.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testDie() {
+    void testDie() {
         IO<Void, Integer> io = IO.effectTotal(() -> 8 / 0);
         final Either<Cause<Void>, Integer> result = defaultRuntime.unsafeRun(io);
-        Assert.assertTrue(
-                result.toString(),
-                result.isLeft() && result.left().isDie()
+        Assertions.assertTrue(
+                result.isLeft() && result.left().isDie(),
+                result.toString()
         );
     }
 
     @Test
-    public void testEitherSuccess() {
+    void testEitherSuccess() {
         IO<Void, Either<Object, Integer>> io = IO.succeed(8).either();
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(Right.of(8)),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testEitherFail() {
+    void testEitherFail() {
         IO<Void, Either<String, Object>> io =
                 IO.fail(Cause.fail("Syntax error")).either();
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(Left.of("Syntax error")),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testFail() {
+    void testFail() {
         IO<String, ?> io = IO.fail(Cause.fail("Syntax error"));
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.fail("Syntax error")),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testFoldSuccess() {
+    void testFoldSuccess() {
         IO<String, Integer> ioValue = IO.succeed(4);
         IO<String, Integer> io = ioValue
                 .foldM(
                         v -> IO.succeed(8),
                         v -> IO.succeed(v * v)
                 );
-        Assert.assertEquals(Right.of(16), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(16), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testFoldFailure() {
+    void testFoldFailure() {
         IO<String, Integer> ioValue = IO.fail(Cause.fail("Error"));
         IO<String, Integer> io = ioValue
                 .foldM(
                         v -> IO.succeed(v.length()),
                         v -> IO.succeed(v * v)
                 );
-        Assert.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testFoldCauseFailure() {
+    void testFoldCauseFailure() {
         IO<String, Integer> ioValue = IO.fail(Cause.fail("Error"));
         IO<String, Integer> io = ioValue
                 .foldCauseM(
                         v -> IO.succeed(v.getValue().length()),
                         v -> IO.succeed(v * v)
                 );
-        Assert.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testFork() {
+    void testFork() {
         IO<Object, Integer> io =
                 IO.effectTotal(() -> 6).fork().flatMap(fiber1 ->
                         IO.effectTotal(() -> 7).fork().flatMap(fiber2 ->
@@ -194,11 +194,11 @@ public class IOTest {
                                         IO.join(fiber2).map(value2 ->
                                                 value1 * value2
                                         ))));
-        Assert.assertEquals(Right.of(42), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(42), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testBlockingFork() {
+    void testBlockingFork() {
         IO<Object, Integer> io =
                 IO.effectTotal(() -> 6).blocking().fork().flatMap(fiber1 ->
                         IO.effectTotal(() -> 7).blocking().fork().flatMap(fiber2 ->
@@ -206,11 +206,11 @@ public class IOTest {
                                         IO.join(fiber2).map(value2 ->
                                                 value1 * value2
                                         ))));
-        Assert.assertEquals(Right.of(42), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(42), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testBlockingAndNoBlockingForks() {
+    void testBlockingAndNoBlockingForks() {
         IO<Object, String> ioThreadName = IO.effectTotal(() ->
                 Thread.currentThread().getName()
         );
@@ -223,40 +223,40 @@ public class IOTest {
                                         ))));
         Either<Cause<Object>, String> result = defaultRuntime.unsafeRun(io);
         final String resultStr = result.orElse("");
-        Assert.assertEquals(
-                "One of the thread's name is not good: " + result,
+        Assertions.assertEquals(
                 resultStr.indexOf("blocking"),
-                resultStr.lastIndexOf("blocking")
+                resultStr.lastIndexOf("blocking"),
+                "One of the thread's name is not good: " + result
         );
     }
 
     @Test
-    public void testFlatMapIO() {
+    void testFlatMapIO() {
         IO<Void, Integer> io = IO.succeed(4).flatMap(
                 n -> IO.effectTotal(() -> n * n)
         );
-        Assert.assertEquals(Right.of(16), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(16), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testEffectPartial() {
+    void testEffectPartial() {
         IO<Failure, Integer> io =
                 IO.effect(() -> 8 / 2).flatMap((Integer n) ->
                         IO.effectTotal(() -> n * n)
                 );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(16),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testEffectPartialWithFailure() {
+    void testEffectPartialWithFailure() {
         IO<Failure, Integer> io =
                 IO.effect(() -> 8 / 0).flatMap((Integer n) ->
                         IO.effectTotal(() -> n * n)
                 );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.fail(ExceptionFailure.of(
                         new ArithmeticException("/ by zero")))
                 ).toString(),
@@ -265,21 +265,21 @@ public class IOTest {
     }
 
     @Test
-    public void testContext() {
+    void testContext() {
         IO<Object, String> io = IO.access(
                 Integer.class,
                 (Integer n) -> Integer.toString(n * n)
         ).provide(Integer.class, 4);
-        Assert.assertEquals(Right.of("16"), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of("16"), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testContextMissing() {
+    void testContextMissing() {
         IO<Object, String> io = IO.access(
                 Integer.class,
                 (Integer n) -> Integer.toString(n * n)
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(
                         Cause.fail("Missing context: java.lang.Integer")
                 ),
@@ -288,7 +288,7 @@ public class IOTest {
     }
 
     @Test
-    public void testContextScopes() {
+    void testContextScopes() {
         final IO<Object, String> io = IO.succeed("OK").flatMap(
                 str -> IO.access(
                         Integer.class,
@@ -300,7 +300,7 @@ public class IOTest {
                         (Integer n) -> Integer.toString(n * n)
                 ).recoverCause(objectCause -> IO.succeed(objectCause.toString()))
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of("Fail(Missing context: java.lang.Integer)"),
                 defaultRuntime.unsafeRun(io)
         );
@@ -322,19 +322,19 @@ public class IOTest {
     }
 
     @Test
-    public void testBracket() {
+    void testBracket() {
         final Resource res = new Resource();
         final IO<Void, Integer> io = IO.bracket(
                 IO.succeed(res),
                 resource -> IO.effectTotal(resource::close),
                 resource -> IO.effectTotal(() -> resource.use(2))
         );
-        Assert.assertEquals(Right.of(2), defaultRuntime.unsafeRun(io));
-        Assert.assertFalse(res.acquired);
+        Assertions.assertEquals(Right.of(2), defaultRuntime.unsafeRun(io));
+        Assertions.assertFalse(res.acquired);
     }
 
     @Test
-    public void testBracketWithTwoFailures() {
+    void testBracketWithTwoFailures() {
         final Resource res = new Resource();
         final GeneralFailure<String> notClosable = GeneralFailure.of("Not closable");
         final GeneralFailure<String> divideByZero = GeneralFailure.of("/ by zero");
@@ -346,18 +346,18 @@ public class IOTest {
                         .flatMap(i -> IO.fail(Cause.die(divideByZero)))
         );
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(
                         Cause.die(divideByZero).then(
                                 Cause.die(notClosable))
                 ),
                 defaultRuntime.unsafeRun(io)
         );
-        Assert.assertTrue(res.acquired);
+        Assertions.assertTrue(res.acquired);
     }
 
     @Test
-    public void testNestedBracket() {
+    void testNestedBracket() {
         final Resource res1 = new Resource();
         final Resource res2 = new Resource();
         final IO<Void, Integer> io = IO.bracket(
@@ -371,13 +371,13 @@ public class IOTest {
                         )
                 )
         );
-        Assert.assertEquals(Right.of(7), defaultRuntime.unsafeRun(io));
-        Assert.assertFalse(res1.acquired);
-        Assert.assertFalse(res2.acquired);
+        Assertions.assertEquals(Right.of(7), defaultRuntime.unsafeRun(io));
+        Assertions.assertFalse(res1.acquired);
+        Assertions.assertFalse(res2.acquired);
     }
 
     @Test
-    public void testNestedBracketWithFailure() {
+    void testNestedBracketWithFailure() {
         final Resource res1 = new Resource();
         final Resource res2 = new Resource();
         final IO<String, Integer> io = IO.bracket(
@@ -392,9 +392,9 @@ public class IOTest {
                         )
                 )
         );
-        Assert.assertEquals(Left.of(Cause.fail("Failure")), defaultRuntime.unsafeRun(io));
-        Assert.assertFalse(res1.acquired);
-        Assert.assertFalse(res2.acquired);
+        Assertions.assertEquals(Left.of(Cause.fail("Failure")), defaultRuntime.unsafeRun(io));
+        Assertions.assertFalse(res1.acquired);
+        Assertions.assertFalse(res2.acquired);
     }
 
     private IO<Void, Boolean> odd(int n) {
@@ -410,14 +410,14 @@ public class IOTest {
     }
 
     @Test
-    public void testMutuallyTailRecursive() {
+    void testMutuallyTailRecursive() {
         IO<Void, Boolean> io = even(1_000_000);
         final Either<Cause<Void>, Boolean> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of(true), result);
+        Assertions.assertEquals(Right.of(true), result);
     }
 
     //@Test
-    //public void testLock() {
+    //void testLock() {
     //ExecutorService asyncExecutor = Executors.newFixedThreadPool(4);
     //ExecutorService blockingExecutor = Executors.newCachedThreadPool();
     //ExecutorService calcExecutor = new ForkJoinPool(2);
@@ -437,124 +437,124 @@ public class IOTest {
     //fnIo.apply(n5).on(calcExecutor).flatMap(
     //fnIo
     //)))))));
-    //Assert.assertEquals(Right.of(8), defaultRuntime.unsafeRun(lockIo));
+    //Assertions.assertEquals(Right.of(8), defaultRuntime.unsafeRun(lockIo));
 
     //asyncExecutor.shutdown();
     //blockingExecutor.shutdown();
     //calcExecutor.shutdown();
     //}
     @Test
-    public void testUnit() {
+    void testUnit() {
         IO<Object, Integer> io = IO.succeed(2).flatMap(i1 ->
                 IO.unit().map(i2 ->
                         i1 * i1
                 ));
-        Assert.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(4), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testPeek() {
+    void testPeek() {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(7))
                 .peek(Resource::close);
-        Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(7, res.usage);
-        Assert.assertFalse(res.acquired);
+        Assertions.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(7, res.usage);
+        Assertions.assertFalse(res.acquired);
     }
 
     @Test
-    public void testPeekM() {
+    void testPeekM() {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(7))
                 .peekM(r2 -> IO.effectTotal(r2::close));
-        Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(7, res.usage);
-        Assert.assertFalse(res.acquired);
+        Assertions.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(7, res.usage);
+        Assertions.assertFalse(res.acquired);
     }
 
     @Test
-    public void testPeekMWithFailure() {
+    void testPeekMWithFailure() {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(7))
                 .peekM(r2 -> IO.fail(Cause.fail(5))
                 );
-        Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(7, res.usage);
-        Assert.assertTrue(res.acquired);
+        Assertions.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(7, res.usage);
+        Assertions.assertTrue(res.acquired);
         res.close();
     }
 
     @Test
-    public void testRecoverWithSuccess() {
+    void testRecoverWithSuccess() {
         IO<Object, Integer> io = IO.succeed(3)
                 .recover(failure -> IO.succeed(5));
-        Assert.assertEquals(Right.of(3), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(3), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testRecoverWithFailure() {
+    void testRecoverWithFailure() {
         IO<Object, Integer> io = IO.<Object, Integer>fail(Cause.fail(3))
                 .recover(failure -> IO.succeed(5));
-        Assert.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testRecoverWithDie() {
+    void testRecoverWithDie() {
         IO<Object, Integer> io =
                 IO.<Object, Integer>fail(Cause.die(GeneralFailure.of(3)))
                         .recover(failure -> IO.succeed(5));
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.die(GeneralFailure.of(3))),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRecoverCauseWithSuccess() {
+    void testRecoverCauseWithSuccess() {
         IO<Object, Integer> io = IO.succeed(3)
                 .recoverCause(failure -> IO.succeed(5));
-        Assert.assertEquals(Right.of(3), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(3), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testRecoverCauseWithFailure() {
+    void testRecoverCauseWithFailure() {
         IO<Object, Integer> io = IO.<Object, Integer>fail(Cause.fail(3))
                 .recoverCause(failure -> IO.succeed(5));
-        Assert.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testRecoverCauseWithDie() {
+    void testRecoverCauseWithDie() {
         IO<Object, Integer> io =
                 IO.<Object, Integer>fail(Cause.die(GeneralFailure.of(3)))
                         .recoverCause(failure -> IO.succeed(5));
-        Assert.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(5), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testDelay() {
+    void testDelay() {
         long delayNanoseconds = 5000000L;
         IO<Object, Boolean> io = IO.succeed(System.nanoTime())
                 .map(start -> System.nanoTime() - start).delay(delayNanoseconds)
                 .map(elapsed -> elapsed >= delayNanoseconds);
-        Assert.assertEquals(Right.of(true), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(Right.of(true), defaultRuntime.unsafeRun(io));
     }
 
     @Test
-    public void testRepeat() {
+    void testRepeat() {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(1)).repeat(5)
                 .peek(Resource::close);
-        Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(5, res.usage);
+        Assertions.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(5, res.usage);
     }
 
     @Test
-    public void testRepeatWithFailure() {
+    void testRepeatWithFailure() {
         final Resource res = new Resource();
         IO<Object, Resource> ioInit = IO.succeed(res)
                 .flatMap(r1 -> {
@@ -562,22 +562,22 @@ public class IOTest {
                     return IO.<Object, Resource>fail(Cause.fail(5));
                 }).repeat(5);
         var io = ioInit.peek(Resource::close);
-        Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(1, res.usage);
+        Assertions.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(1, res.usage);
     }
 
     @Test
-    public void testRetry() {
+    void testRetry() {
         final Resource res = new Resource();
         IO<Object, Resource> io = IO.succeed(res)
                 .peek(r1 -> r1.use(1)).retry(5)
                 .peek(Resource::close);
-        Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(1, res.usage);
+        Assertions.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(1, res.usage);
     }
 
     @Test
-    public void testRetryWithFailure() {
+    void testRetryWithFailure() {
         final Resource res = new Resource();
         IO<Object, Resource> ioInit = IO.succeed(res)
                 .flatMap(r1 -> {
@@ -585,12 +585,12 @@ public class IOTest {
                     return IO.<Object, Resource>fail(Cause.fail(5));
                 }).retry(5);
         var io = ioInit.peek(Resource::close);
-        Assert.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(5, res.usage);
+        Assertions.assertEquals(Left.of(Cause.fail(5)), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(5, res.usage);
     }
 
     @Test
-    public void testRetryWithRecoveredFailure() {
+    void testRetryWithRecoveredFailure() {
         final Resource res = new Resource();
         IO<Object, Resource> ioInit = IO.succeed(res)
                 .flatMap(r1 -> {
@@ -602,59 +602,59 @@ public class IOTest {
                     }
                 }).retry(5);
         var io = ioInit.peek(Resource::close);
-        Assert.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
-        Assert.assertEquals(4, res.usage);
+        Assertions.assertEquals(Right.of(res), defaultRuntime.unsafeRun(io));
+        Assertions.assertEquals(4, res.usage);
     }
 
     @Test
-    public void testTimeoutWithInterrupt() {
-        IO<Failure, Integer> io = slow(1000, 2).timeout(20000000);
+    void testTimeoutWithInterrupt() {
+        IO<Failure, Integer> io = slow(1000, 2).timeout(20_000_000);
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.interrupt()),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testTimeoutWithoutInterrupt() {
+    void testTimeoutWithoutInterrupt() {
         IO<Failure, Integer> io = slow(10, 2).timeout(1_000_000_000);
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(2),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testSequence() {
+    void testSequence() {
         final Stream<IO<Object, Integer>> streamIO =
                 Stream.of(IO.effectTotal(() -> 13), IO.effectTotal(() -> 6), IO.succeed(4));
 
         IO<Object, Integer> io = IO.sequence(streamIO)
                 .map(stream -> stream.mapToInt(i -> i * 2).sum());
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(46),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testSequenceBig() {
+    void testSequenceBig() {
         final long count = 100_000;
         final Stream<IO<Object, Long>> streamIO =
                 LongStream.range(0, count).mapToObj(IO::succeed);
 
         IO<Object, Long> io = IO.sequence(streamIO)
                 .map(stream -> stream.mapToLong(i -> i * 2).sum());
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of((count - 1) * count),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testStreamBig() {
+    void testStreamBig() {
         final long count = 1_000_000;
         final Stream<Long> stream =
                 LongStream.range(0, count).boxed();
@@ -663,14 +663,14 @@ public class IOTest {
                 .mapToLong(Long::longValue)
                 .map(i -> i * 2)
                 .sum();
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Long.valueOf((count - 1) * count).longValue(),
                 Long.valueOf(sum).longValue()
         );
     }
 
     @Test
-    public void testSequencePar() {
+    void testSequencePar() {
         final long millis = 100;
 
         final Stream<IO<Failure, Integer>> streamIO =
@@ -685,35 +685,35 @@ public class IOTest {
                         ).sum()
                 );
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(46),
                 defaultRuntime.unsafeRun(io)
         );
 
         final long time = System.currentTimeMillis() - start;
 
-        Assert.assertTrue(
-                "Time was: " + time,
-                time < 3 * millis
+        Assertions.assertTrue(
+                time < 3 * millis,
+                "Time was: " + time
         );
     }
 
     @Test
-    public void testSequenceParBig() {
+    void testSequenceParBig() {
         final long count = 10_000;
         final Stream<IO<Object, Long>> streamIO =
                 LongStream.range(0, count).mapToObj(IO::succeed);
 
         IO<Object, Long> io = IO.sequencePar(streamIO)
                 .map(stream -> stream.mapToLong(i -> i * 2).sum());
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of((count - 1) * count),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testSequenceRace() {
+    void testSequenceRace() {
         final long millis = 100;
 
         final Stream<IO<Failure, Integer>> streamIO = Stream.concat(
@@ -727,91 +727,91 @@ public class IOTest {
 
         IO<Failure, Integer> io = IO.sequenceRace(streamIO);
 
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(-6),
                 defaultRuntime.unsafeRun(io)
         );
 
         final long time = System.currentTimeMillis() - start;
 
-        Assert.assertTrue(
-                "Time was: " + time,
-                time < 6 * millis
+        Assertions.assertTrue(
+                time < 6 * millis,
+                "Time was: " + time
         );
     }
 
     @Test
-    public void testZipWith() {
+    void testZipWith() {
         IO<Object, String> io = IO.succeed(2).zipWith(
                 IO.succeed("Test"),
                 (i, s) -> s + "-" + i
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of("Test-2"),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testZip() {
+    void testZip() {
         IO<Object, Tuple2<Integer, String>> io = IO.succeed(2).zip(
                 IO.succeed("Test")
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(Tuple2.of(2, "Test")),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testZipPar() {
+    void testZipPar() {
         IO<Failure, Tuple2<Integer, String>> io = slow(10, 2).zipPar(
                 slow(1, "Test")
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(Tuple2.of(2, "Test")),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testZipParWith() {
+    void testZipParWith() {
         IO<Failure, String> io = slow(10, 2).zipParWith(
                 slow(1, "Test"),
                 (i, s) -> s + "-" + i
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of("Test-2"),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRace() {
+    void testRace() {
         IO<Failure, Integer> io = slow(100, 2).race(
                 slow(1, 5)
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(5),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRaceWinnerFail() {
+    void testRaceWinnerFail() {
         IO<Failure, Integer> io = slow(500, 2).race(
                 slow(10, 5).flatMap(n ->
                         IO.fail(Cause.fail(GeneralFailure.of(n)))
                 )
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(2),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRaceFails() {
+    void testRaceFails() {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
         ).race(
@@ -819,38 +819,38 @@ public class IOTest {
                         IO.fail(Cause.fail(n))
                 )
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.fail(5).then(Cause.fail(2))),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRaceAttempt() {
+    void testRaceAttempt() {
         IO<Failure, Integer> io = slow(100, 2).raceAttempt(
                 slow(1, 5)
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(5),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRaceAttemptWinnerFail() {
+    void testRaceAttemptWinnerFail() {
         IO<Failure, Integer> io = slow(50, 2).raceAttempt(
                 slow(1, 5).flatMap(n ->
                         IO.fail(Cause.fail(GeneralFailure.of(n)))
                 )
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.fail(GeneralFailure.of(5))),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testRaceAttemptFails() {
+    void testRaceAttemptFails() {
         IO<Integer, Integer> io = slow(50, 2).<Integer, Integer>flatMap(n ->
                 IO.fail(Cause.fail(n))
         ).raceAttempt(
@@ -858,14 +858,14 @@ public class IOTest {
                         IO.fail(Cause.fail(n))
                 )
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Left.of(Cause.fail(5)),
                 defaultRuntime.unsafeRun(io)
         );
     }
 
     @Test
-    public void testZipParWithFailureFirst() {
+    void testZipParWithFailureFirst() {
         IO<Failure, Tuple2<Integer, String>> io =
                 IO.<Failure, Integer>interrupt().zipPar(
                         slow(3000, "Test")
@@ -873,14 +873,14 @@ public class IOTest {
         final Either<Cause<Failure>, Tuple2<Integer, String>> result =
                 defaultRuntime.unsafeRun(io);
 
-        Assert.assertTrue(
-                result.toString(),
-                result.isLeft() && result.left().isInterrupt()
+        Assertions.assertTrue(
+                result.isLeft() && result.left().isInterrupt(),
+                result.toString()
         );
     }
 
     @Test
-    public void testZipParWithFailureSecond() {
+    void testZipParWithFailureSecond() {
         IO<Failure, Tuple2<Integer, String>> io = slow(3000, 2).zipPar(
                 IO.interrupt()
         );
@@ -892,14 +892,14 @@ public class IOTest {
                 exceptionFailure.throwable.printStackTrace(System.err);
             }
         });
-        Assert.assertTrue(
-                result.toString(),
-                result.isLeft() && result.left().isInterrupt()
+        Assertions.assertTrue(
+                result.isLeft() && result.left().isInterrupt(),
+                result.toString()
         );
     }
 
     @Test
-    public void testBlockingFutureCancel() {
+    void testBlockingFutureCancel() {
         final long start = System.currentTimeMillis();
         final long millis = 100L;
 
@@ -933,9 +933,9 @@ public class IOTest {
         }
         final long time = System.currentTimeMillis() - start;
 
-        Assert.assertTrue(
-                "Time was: " + time,
-                time < millis
+        Assertions.assertTrue(
+                time < millis,
+                "Time was: " + time
         );
     }
     /*

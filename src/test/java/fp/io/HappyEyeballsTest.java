@@ -14,9 +14,9 @@ import java.util.logging.LogManager;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.Test;
 
 public class HappyEyeballsTest {
     final static DefaultPlatform platform = new DefaultPlatform();
@@ -47,7 +47,7 @@ public class HappyEyeballsTest {
                     )
                     .collect(Collectors.toList());
 
-    @AfterClass
+    @AfterAll
     public static void setUp() {
         platform.shutdown();
     }
@@ -116,7 +116,7 @@ public class HappyEyeballsTest {
     }
 
     @Test
-    public void testHappySockets() {
+    void testHappySockets() {
         IO<Failure, Socket> io =
                 IO.effect(() -> Arrays.asList(
                                 InetAddress.getAllByName("debian.org")
@@ -150,31 +150,31 @@ public class HappyEyeballsTest {
         Either<Cause<Failure>, Socket> result = defaultRuntime.unsafeRun(
                 io
         );
-        Assert.assertTrue(result.isRight());
+        Assertions.assertTrue(result.isRight());
     }
 
     @Test
-    public void testHappyEyeballs1() {
+    void testHappyEyeballs1() {
         log("Start testHappyEyeballs1");
         IO<Failure, String> io = run(tasks, DELAY);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of("task2"), result);
+        Assertions.assertEquals(Right.of("task2"), result);
     }
 
     @Test
-    public void testHappyEyeballs2() {
+    void testHappyEyeballs2() {
         log("Start testHappyEyeballs2");
         IO<Failure, String> io = run2(tasks, DELAY);
         Either<Cause<Failure>, String> result = defaultRuntime.unsafeRun(io);
-        Assert.assertEquals(Right.of("task4"), result);
+        Assertions.assertEquals(Right.of("task4"), result);
     }
 
     @Test
-    public void testRace() {
+    void testRace() {
         IO<Failure, Integer> io = slow(100, 2).race(
                 slow(1, 5)
         );
-        Assert.assertEquals(
+        Assertions.assertEquals(
                 Right.of(5),
                 defaultRuntime.unsafeRun(io)
         );

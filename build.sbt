@@ -47,8 +47,8 @@ lazy val root = (project in file("."))
     libraryDependencies ++= Seq(
       "org.postgresql" % "postgresql" % "42.2.10" % Test,
       "com.h2database" % "h2" % "1.4.197" % Test,
-      "junit" % "junit" % "4.12" % Test,
-      "com.novocode" % "junit-interface" % "0.11" % Test
+      "org.junit.jupiter" % "junit-jupiter-api" % "6.0.1" % Test,
+      "com.github.sbt.junit" % "jupiter-interface" % "0.17.0" % Test
     ),
     crossPaths := false,
     testOptions += Tests.Argument(TestFrameworks.JUnit)
