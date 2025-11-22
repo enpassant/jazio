@@ -282,9 +282,14 @@ public class FiberContext<F, R> extends RecursiveTask<Either<Cause<F>, R>>
                                     (IO.Provide<Object, F, Object>) curIo;
                             final HMap hmap = Optional.ofNullable(environments.peek())
                                     .orElse(HMap.empty());
-                            environments.push(
-                                    hmap.add(provideIO.context, provideIO.contextValue)
-                            );
+                            final HMap newHmap = hmap.add(provideIO.context, provideIO.contextValue);
+                            if (provideIO.context != provideIO.contextClass.getName()) {
+                                environments.push(
+                                        newHmap.add(provideIO.contextClass.getName(), provideIO.contextValue)
+                                );
+                            } else {
+                                environments.push(newHmap);
+                            }
                             stack.push((R r) -> IO.effectTotal(() -> {
                                 environments.pop();
                                 return r;

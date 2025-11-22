@@ -123,8 +123,7 @@ public abstract class Cause<F> {
             Either<Cause<Failure>, R> result
     ) {
         return result.fold(
-                cause -> cause.isFail() ?
-                        Left.of(cause.getValue()) :
+                cause ->
                         Left.of(cause.getFailure()),
                 Right::of
         );

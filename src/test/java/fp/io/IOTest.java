@@ -1,9 +1,12 @@
 package fp.io;
 
+import fp.io.log.Log;
+import fp.io.log.TestLog;
 import fp.util.Either;
 import fp.util.ExceptionFailure;
 import fp.util.Failure;
 import fp.util.GeneralFailure;
+import fp.util.HMap;
 import fp.util.Left;
 import fp.util.Right;
 import fp.util.Tuple2;
@@ -303,6 +306,42 @@ class IOTest {
         Assertions.assertEquals(
                 Right.of("Fail(Missing context: java.lang.Integer)"),
                 defaultRuntime.unsafeRun(io)
+        );
+    }
+
+    @Test
+    void testMultiInstanceContext() {
+        final TestLog mainLog = new TestLog();
+        final TestLog authLog = new TestLog();
+
+        final IO<Object, Void> io = IO.succeed("Start application").andThen(
+                        Log.debug("Start program")
+                                .useContext("mainLog", Log.Service.class)
+                )
+                .andThen(
+                        IO.succeed("Login").andThen(
+                                Log.info("John has logged in")
+                                        .useContext("authLog", Log.Service.class)
+                        ));
+
+        final HMap environment = HMap.of("mainLog", mainLog).add("authLog", authLog);
+
+        final Runtime multiInstanceRuntime =
+                new DefaultRuntime(environment, platform);
+        multiInstanceRuntime.unsafeRun(io);
+
+        Assertions.assertEquals(
+                """
+                        [Debug] Start program
+                        """,
+                mainLog.getOutputs()
+        );
+
+        Assertions.assertEquals(
+                """
+                        [Info] John has logged in
+                        """,
+                authLog.getOutputs()
         );
     }
 

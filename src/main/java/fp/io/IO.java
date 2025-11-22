@@ -275,6 +275,17 @@ public class IO<F, R> {
         return new Provide<>(context, contextClass, contextValue, this);
     }
 
+    public <C> IO<F, R> useContext(
+            String context,
+            Class<C> contextClass
+    ) {
+        return new Access<>(
+                context,
+                contextClass,
+                c -> this.provide(contextClass, c)
+        );
+    }
+
     public IO<F, R> race(
             IO<F, R> that
     ) {
@@ -282,7 +293,7 @@ public class IO<F, R> {
                 result -> IO.effect(() -> result)
                         .mapFailure(Cause::die)
                         .flatMap(raceResult ->
-                                raceResult.<R>getWinner().getCompletedValue().fold(
+                                raceResult.getWinner().getCompletedValue().fold(
                                         failure -> {
                                             final Fiber<F, R> looser = raceResult.getLooser();
                                             return looser.getValue().fold(
@@ -308,7 +319,7 @@ public class IO<F, R> {
                         .mapFailure(Cause::die)
                         .peek(raceResult -> raceResult.getLooser().interrupt())
                         .flatMap(raceResult ->
-                                raceResult.<R>getWinner().getCompletedValue().fold(
+                                raceResult.getWinner().getCompletedValue().fold(
                                         IO::fail,
                                         IO::succeed
                                 )
