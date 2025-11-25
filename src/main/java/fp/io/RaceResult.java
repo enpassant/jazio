@@ -1,8 +1,8 @@
 package fp.io;
 
 public class RaceResult<F, R> {
-    private final Fiber<F, R> fiberFirst;
-    private final Fiber<F, R> fiberSecond;
+    public final Fiber<F, R> fiberFirst;
+    public final Fiber<F, R> fiberSecond;
     private final boolean isFirstTheWinner;
 
     public RaceResult(

@@ -21,6 +21,20 @@ public class ArrayTest {
     }
 
     @Test
+    void testCounterDirectly() {
+        final int SIZE = 10_000_000;
+        final int[] array = incrementArray(SIZE);
+        final int threshold = 100_000;
+
+        final Integer result = computeDirectly(array, 0, SIZE);
+
+        Assertions.assertEquals(
+                SIZE / 2,
+                result
+        );
+    }
+
+    @Test
     void testCounter() {
         final int SIZE = 10_000_000;
         final int[] array = incrementArray(SIZE);

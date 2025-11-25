@@ -64,7 +64,7 @@ public class FiberVirtual<F, R> implements Fiber<F, R> {
     @Override
     public IO<F, Void> interrupt() {
         LOG.fine(() -> Thread.currentThread().getName() + ": interrupt");
-        future.cancel(true);
+//        future.cancel(true);
         return fiberContext.interrupt();
     }
 

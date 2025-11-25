@@ -22,24 +22,7 @@ import org.junit.jupiter.api.Test;
 
 class IOTest {
 
-    static {
-        System.setProperty(
-                "java.util.logging.config.file",
-                ClassLoader.getSystemResource(
-                        "logging.properties"
-                ).getPath()
-        );
-    }
-
     private static final Logger LOG = Logger.getLogger(FiberContext.class.getName());
-
-    static {
-        System.out.println("Logger level: " + LOG.getLevel());
-        System.out.println("Logger parent: " + LOG.getParent().getName());
-        System.out.println("Parent level: " + LOG.getParent().getLevel());
-        System.out.println("Logging config file location: " +
-                System.getProperty("java.util.logging.config.file"));
-    }
 
     final static DefaultPlatform platform = new DefaultPlatform();
 
