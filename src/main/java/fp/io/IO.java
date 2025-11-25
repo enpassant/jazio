@@ -97,6 +97,18 @@ public class IO<F, R> {
         return new Succeed<>(r);
     }
 
+    public static <F, R> IO<F, R> fromOptional(Optional<R> optional, F fail) {
+        return optional.<IO<F, R>>map(IO::succeed)
+                .orElseGet(() -> IO.fail(Cause.fail(fail)));
+    }
+
+    public static <F, R> IO<F, R> fromEither(Either<F, R> either) {
+        return either.fold(
+                fail -> IO.fail(Cause.fail(fail)),
+                IO::succeed
+        );
+    }
+
     public <F2> IO<F2, Either<F, R>> either() {
         return foldM(
                 failure -> IO.succeed(Left.of(failure)),
@@ -417,16 +429,12 @@ public class IO<F, R> {
     ) {
         return io.flatMap(value -> {
             builder.accept(value);
-            return IO.<F, Boolean>succeed(
-                    iterator.hasNext()
-            ).flatMap(hasNext -> {
-                if (hasNext) {
-                    final IO<F, R> valueIO = iterator.next();
-                    return sequenceLoop(builder, iterator, valueIO);
-                } else {
-                    return io.map(r -> builder.build());
-                }
-            });
+            if (iterator.hasNext()) {
+                final IO<F, R> valueIO = iterator.next();
+                return sequenceLoop(builder, iterator, valueIO);
+            } else {
+                return IO.succeed(builder.build());
+            }
         });
     }
 
