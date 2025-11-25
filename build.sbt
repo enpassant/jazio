@@ -1,6 +1,6 @@
 name := """jazio"""
 
-version := "2.0.0"
+version := "2.0.1-SNAPSHOT"
 
 description := "Java IO effect library, inspired by the fantastic ZIO library"
 
@@ -45,8 +45,8 @@ lazy val root = (project in file("."))
     javaOptions += "-Xmx512m",
     organization := "io.github.enpassant",
     libraryDependencies ++= Seq(
-      "org.postgresql" % "postgresql" % "42.2.10" % Test,
-      "com.h2database" % "h2" % "1.4.197" % Test,
+      "org.postgresql" % "postgresql" % "42.7.8" % Test,
+      "com.h2database" % "h2" % "2.4.240" % Test,
       "org.junit.jupiter" % "junit-jupiter-api" % "6.0.1" % Test,
       "com.github.sbt.junit" % "jupiter-interface" % "0.17.0" % Test
     ),
